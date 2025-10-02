@@ -10,7 +10,6 @@ const PAGE_TITLES: Record<Page, string> = {
     BILLING: 'Create New Bill',
     SETTINGS: 'Application Settings',
     REPORTS: 'Reports & Analytics',
-    PENDING_PAYMENTS: 'Pending Payments'
 };
 
 const AppHeader: React.FC<{ currentPage: Page; }> = ({ currentPage }) => {

@@ -23,6 +23,7 @@ export interface Customer {
   joinDate: string;
   dob?: string;
   createdBy: string; // 'admin' or staff ID
+  // FIX: Added pendingBalance to track outstanding amounts.
   pendingBalance: number;
 }
 
@@ -79,7 +80,7 @@ export interface ActivityLog {
 }
 
 
-export type Page = 'DASHBOARD' | 'INVENTORY' | 'CUSTOMERS' | 'BILLING' | 'SETTINGS' | 'REPORTS' | 'PENDING_PAYMENTS';
+export type Page = 'DASHBOARD' | 'INVENTORY' | 'CUSTOMERS' | 'BILLING' | 'SETTINGS' | 'REPORTS';
 
 export interface GoogleTokenResponse {
   access_token: string;

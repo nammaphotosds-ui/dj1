@@ -39,7 +39,6 @@ const Sidebar: React.FC<{
             { page: 'INVENTORY' as Page, label: 'Inventory', icon: <InventoryIcon /> },
             { page: 'CUSTOMERS' as Page, label: 'Customers', icon: <UsersIcon /> },
             { page: 'BILLING' as Page, label: 'Create Bill', icon: <BillingIcon /> },
-            { page: 'PENDING_PAYMENTS' as Page, label: 'Pending', icon: <PendingIcon /> },
             { page: 'REPORTS' as Page, label: 'Reports', icon: <ReportsIcon /> },
             { page: 'SETTINGS' as Page, label: 'Settings', icon: <SettingsIcon /> },
         ]

@@ -6,7 +6,6 @@ import { CustomersPage } from './components/CustomersPage';
 import BillingPage from './components/BillingPage';
 import SettingsPage from './components/SettingsPage';
 import ReportsPage from './components/ReportsPage';
-import PendingPaymentsPage from './components/PendingPaymentsPage';
 import type { Page } from './types';
 import { useAuthContext } from './context/AuthContext';
 import { useUIContext } from './context/UIContext';
@@ -51,7 +50,7 @@ const AppContent: React.FC = () => {
     const isStaff = currentUser.role === 'staff';
     
     // Staff restrictions
-    if (isStaff && (currentPage === 'INVENTORY' || currentPage === 'REPORTS' || currentPage === 'SETTINGS' || currentPage === 'PENDING_PAYMENTS')) {
+    if (isStaff && (currentPage === 'INVENTORY' || currentPage === 'REPORTS' || currentPage === 'SETTINGS')) {
         return <DashboardPage setCurrentPage={setCurrentPage} />;
     }
 
@@ -68,8 +67,6 @@ const AppContent: React.FC = () => {
         return <ReportsPage setCurrentPage={setCurrentPage} />;
       case 'SETTINGS':
         return <SettingsPage />;
-      case 'PENDING_PAYMENTS':
-        return <PendingPaymentsPage />;
       default:
         return <DashboardPage setCurrentPage={setCurrentPage}/>;
     }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Page, CurrentUser } from '../../types';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, LogoutIcon, PendingIcon } from '../common/Icons';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, LogoutIcon } from '../common/Icons';
 
 const NavItem: React.FC<{
     page: Page;
@@ -31,7 +31,6 @@ const MoreMenu: React.FC<{
 }> = ({ currentUser, setCurrentPage, onLogout, onClose }) => {
     const adminOnlyItems = [
         { page: 'REPORTS' as Page, label: 'Reports', icon: <ReportsIcon /> },
-        { page: 'PENDING_PAYMENTS' as Page, label: 'Pending', icon: <PendingIcon /> },
         { page: 'SETTINGS' as Page, label: 'Settings', icon: <SettingsIcon /> },
     ];
     

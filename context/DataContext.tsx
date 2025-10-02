@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { BillType, JewelryCategory } from '../types';
 import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -6,6 +6,7 @@ import * as drive from '../utils/googleDrive';
 import { hashPassword } from '../utils/crypto';
 import { useAuthContext } from './AuthContext';
 
+// FIX: Update addCustomer signature and add recordPayment
 interface DataContextType {
   inventory: JewelryItem[];
   customers: Customer[];
@@ -36,7 +37,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { currentUser, tokenResponse, isInitialized: isAuthInitialized, setCurrentUser } = useAuthContext();
 
   const [inventory, setInventory] = useState<JewelryItem[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  // FIX: Rename customers state to rawCustomers to distinguish from calculated data.
+  const [rawCustomers, setRawCustomers] = useState<Omit<Customer, 'pendingBalance'>[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
@@ -45,6 +47,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [driveFileId, setDriveFileId] = useLocalStorage<string | null>('driveFileId', null);
   const [error, setError] = useState<string | null>(null); // This might be better in AuthContext
   const isInitialLoad = useRef(true);
+  
+  // FIX: Create a memoized `customers` array with calculated pending balances.
+  const customers: Customer[] = useMemo(() => {
+    const billsByCustomer = new Map<string, Bill[]>();
+    bills.forEach(bill => {
+        if (!billsByCustomer.has(bill.customerId)) {
+            billsByCustomer.set(bill.customerId, []);
+        }
+        billsByCustomer.get(bill.customerId)!.push(bill);
+    });
+
+    return rawCustomers.map(customer => {
+        const customerBills = billsByCustomer.get(customer.id) || [];
+        const pendingBalance = customerBills.reduce((total, bill) => total + (bill.grandTotal - bill.amountPaid), 0);
+        return { ...customer, pendingBalance: pendingBalance < 0.01 ? 0 : pendingBalance };
+    });
+  }, [rawCustomers, bills]);
+
 
   // Activity Logger
   const logActivity = (message: string) => {
@@ -82,7 +102,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         try {
-            const dataToSave = { inventory, customers, bills, staff, distributors, activityLogs };
+            // FIX: Save rawCustomers without the calculated pendingBalance.
+            const dataToSave = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs };
             await drive.updateFile(tokenResponse.access_token, driveFileId, dataToSave);
             localStorage.setItem('appDataCache', JSON.stringify(dataToSave));
             if (error) setError(null);
@@ -93,7 +114,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     saveDataToDrive();
-  }, [inventory, customers, bills, staff, distributors, activityLogs]);
+  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs]);
 
   // Data Loading Effect
   useEffect(() => {
@@ -106,7 +127,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (localData) {
             const data = JSON.parse(localData);
             setInventory(data.inventory || []);
-            setCustomers(data.customers || []);
+            setRawCustomers(data.customers || []);
             setBills(data.bills || []);
             setStaff(data.staff || []);
             setDistributors(data.distributors || []);
@@ -123,7 +144,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (fileId) {
                 const content = await drive.getFileContent(tokenResponse.access_token, fileId);
                 setInventory(content.inventory || []);
-                setCustomers(content.customers || []);
+                setRawCustomers(content.customers || []);
                 setBills(content.bills || []);
                 setStaff(content.staff || []);
                 setDistributors(content.distributors || []);
@@ -134,7 +155,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const initialState = { inventory: [], customers: [], bills: [], staff: [], distributors: [], activityLogs: [] };
                 const newFileId = await drive.createFile(tokenResponse.access_token, initialState);
                 setDriveFileId(newFileId);
-                setInventory([]); setCustomers([]); setBills([]); setStaff([]); setDistributors([]); setActivityLogs([]);
+                setInventory([]); setRawCustomers([]); setBills([]); setStaff([]); setDistributors([]); setActivityLogs([]);
                 localStorage.setItem('appDataCache', JSON.stringify(initialState));
             }
         } catch (e: any) {
@@ -148,7 +169,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [isAuthInitialized, tokenResponse, currentUser?.role]);
 
-  const getNextCustomerId = () => `DJ${(customers.length + 1).toString().padStart(5, '0')}`;
+  // FIX: Use rawCustomers length for new ID generation.
+  const getNextCustomerId = () => `DJ${(rawCustomers.length + 1).toString().padStart(5, '0')}`;
 
   const addInventoryItem = async (item: Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
@@ -170,19 +192,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (itemToDelete) logActivity(`Deleted inventory item: ${itemToDelete.name}`);
   };
 
+  // FIX: Update function signature and work with rawCustomers state.
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate' | 'createdBy' | 'pendingBalance'>) => {
     if (!currentUser) throw new Error("User not logged in");
-    const newCustomer: Customer = {
-      ...customer, id: getNextCustomerId(), joinDate: new Date().toISOString(), createdBy: currentUser.id, pendingBalance: 0,
+    const newCustomer: Omit<Customer, 'pendingBalance'> = {
+      ...customer, id: getNextCustomerId(), joinDate: new Date().toISOString(), createdBy: currentUser.id,
     };
-    setCustomers(prev => [...prev, newCustomer]);
+    setRawCustomers(prev => [...prev, newCustomer]);
     logActivity(`Added new customer: ${newCustomer.name}`);
   };
   
   const deleteCustomer = async (customerId: string) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
-    const customerToDelete = customers.find(c => c.id === customerId);
-    setCustomers(prev => prev.filter(c => c.id !== customerId));
+    // FIX: Use rawCustomers to find the customer to delete.
+    const customerToDelete = rawCustomers.find(c => c.id === customerId);
+    setRawCustomers(prev => prev.filter(c => c.id !== customerId));
     setBills(prev => prev.filter(b => b.customerId !== customerId));
     if (customerToDelete) logActivity(`Deleted customer: ${customerToDelete.name}`);
   };
@@ -199,6 +223,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const grandTotal = finalAmount + makingChargeAmount + wastageAmount - billData.bargainedAmount;
     const amountPaid = billData.amountPaid;
     const netWeight = totalGrossWeight - billData.lessWeight;
+    // FIX: Use memoized customers to find customer details.
     const customer = customers.find(c => c.id === billData.customerId);
     if(!customer) throw new Error("Customer not found");
 
@@ -218,15 +243,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return Array.from(inventoryMap.values());
         });
-        
-        const pendingForThisBill = grandTotal - amountPaid;
-        if (pendingForThisBill > 0.01) {
-            setCustomers(prev => prev.map(c => 
-                c.id === billData.customerId 
-                ? { ...c, pendingBalance: c.pendingBalance + pendingForThisBill } 
-                : c
-            ));
-        }
     }
     
     setBills(prev => [...prev, newBill]);
@@ -234,19 +250,43 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newBill;
   };
 
+  // FIX: Implement recordPayment function.
   const recordPayment = async (customerId: string, amount: number) => {
     if (!currentUser) throw new Error("User not logged in");
-    setCustomers(prev =>
-      prev.map(c =>
-        c.id === customerId
-          ? { ...c, pendingBalance: Math.max(0, c.pendingBalance - amount) }
-          : c
-      )
-    );
+    
+    let amountToSettle = amount;
+
+    setBills(prevBills => {
+        const billsCopy = prevBills.map(b => ({...b}));
+
+        const customerUnpaidBillsIndices: number[] = [];
+        billsCopy.forEach((bill, index) => {
+            if (bill.customerId === customerId && bill.grandTotal > bill.amountPaid) {
+                customerUnpaidBillsIndices.push(index);
+            }
+        });
+        
+        customerUnpaidBillsIndices.sort((aIndex, bIndex) => 
+            new Date(billsCopy[aIndex].date).getTime() - new Date(billsCopy[bIndex].date).getTime()
+        );
+
+        for (const billIndex of customerUnpaidBillsIndices) {
+            if (amountToSettle <= 0) break;
+
+            const bill = billsCopy[billIndex];
+            const due = bill.grandTotal - bill.amountPaid;
+            const paymentForThisBill = Math.min(amountToSettle, due);
+            
+            billsCopy[billIndex] = { ...bill, amountPaid: bill.amountPaid + paymentForThisBill };
+
+            amountToSettle -= paymentForThisBill;
+        }
+        
+        return billsCopy;
+    });
+
     const customer = customers.find(c => c.id === customerId);
-    if (customer) {
-      logActivity(`Recorded payment of ₹${amount.toLocaleString()} for ${customer.name}.`);
-    }
+    logActivity(`Recorded payment of ₹${amount.toLocaleString('en-IN')} for customer: ${customer?.name}`);
   };
   
   const resetTransactions = async () => {
@@ -286,6 +326,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (distToDelete) logActivity(`Deleted distributor: ${distToDelete.name}`);
   };
 
+  // FIX: Use memoized customers for lookups.
   const getCustomerById = (id: string) => customers.find(c => c.id === id);
   const getBillsByCustomerId = (id: string) => bills.filter(b => b.customerId === id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);

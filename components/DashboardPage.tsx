@@ -3,7 +3,7 @@ import { useDataContext } from '../context/DataContext';
 import { useUIContext } from '../context/UIContext';
 import { useAuthContext } from '../context/AuthContext';
 import { Page, ActivityLog } from '../types';
-import { UsersIcon, BillingIcon, InventoryIcon, RevenueIcon, ChevronRightIcon, PendingIcon } from './common/Icons';
+import { UsersIcon, BillingIcon, InventoryIcon, RevenueIcon, ChevronRightIcon } from './common/Icons';
 
 declare const Chart: any;
 
@@ -220,16 +220,6 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
   // Admin stats
   const totalRevenue = bills.reduce((sum, bill) => sum + bill.amountPaid, 0);
   const totalStock = inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const pendingPayments = useMemo(() => {
-    return customers.reduce((acc, customer) => {
-        if (customer.pendingBalance > 0) {
-            acc.total += customer.pendingBalance;
-            acc.count += 1;
-        }
-        return acc;
-    }, { total: 0, count: 0 });
-  }, [customers]);
-
 
   // Staff stats
   const staffCustomers = customers.filter(c => c.createdBy === currentUser?.id);
@@ -257,7 +247,7 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
 
   return (
     <div className="space-y-6">
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-4'} gap-4 md:gap-6`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-4 md:gap-6`}>
         {isStaff ? (
           <>
             <StatCard title="Customers Added By You" value={staffCustomers.length} icon={<UsersIcon />} onClick={() => setCurrentPage('CUSTOMERS')} />
@@ -268,12 +258,6 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
             <StatCard title="Customers" value={customers.length} icon={<UsersIcon />} onClick={() => setCurrentPage('CUSTOMERS')} />
             <StatCard title="In Stock" value={totalStock} icon={<InventoryIcon />} onClick={() => setCurrentPage('INVENTORY')} />
             <StatCard title="Revenue" value={formatCurrency(totalRevenue)} icon={<RevenueIcon />} onClick={() => setCurrentPage('REPORTS')} />
-            <StatCard 
-                title={`Pending (${pendingPayments.count} customers)`} 
-                value={formatCurrency(pendingPayments.total)} 
-                icon={<PendingIcon />} 
-                onClick={() => setCurrentPage('PENDING_PAYMENTS')} 
-            />
           </>
         )}
       </div>

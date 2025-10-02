@@ -153,7 +153,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     </div>
                                     <div className={`flex justify-between ${isPaid ? 'text-green-700' : 'text-red-700'}`}>
                                         <span className="font-bold">Status:</span>
-                                        <span className="font-bold">{isPaid ? 'Fully Paid' : 'Partial Payment'}</span>
+                                        <span className="font-bold">{isPaid ? 'Fully Paid' : 'Unpaid'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -264,7 +264,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [lessWeight, setLessWeight] = useState('');
   const [makingChargePercentage, setMakingChargePercentage] = useState('');
   const [wastagePercentage, setWastagePercentage] = useState('');
-  const [amountPaid, setAmountPaid] = useState('');
+  const [isPaid, setIsPaid] = useState(true);
   
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);
@@ -305,14 +305,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         netWeight 
     };
   }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
-
-  useEffect(() => {
-      if (calculations.grandTotal > 0) {
-          setAmountPaid(calculations.grandTotal.toFixed(2));
-      } else {
-          setAmountPaid('');
-      }
-  }, [calculations.grandTotal]);
 
   const handleAddItem = (item: JewelryItem) => {
       setSelectedItems(prev => [...prev, { itemId: item.id, name: item.name, weight: item.weight, price: 0, quantity: 1 }]);
@@ -439,7 +431,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setLessWeight('');
     setMakingChargePercentage('');
     setWastagePercentage('');
-    setAmountPaid('');
+    setIsPaid(true);
     setBillType(BillType.ESTIMATE);
     setSubmissionStatus('idle');
   };
@@ -480,7 +472,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
           lessWeight: parseFloat(lessWeight) || 0,
           makingChargePercentage: parseFloat(makingChargePercentage) || 0,
           wastagePercentage: parseFloat(wastagePercentage) || 0,
-          amountPaid: parseFloat(amountPaid) || 0,
+          amountPaid: isPaid ? calculations.grandTotal : 0,
         });
         
         const customer = getCustomerById(selectedCustomerId);
@@ -612,10 +604,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     <div><label className="block text-sm font-medium">Making Charge (%)</label><input type="number" value={makingChargePercentage} onChange={e => setMakingChargePercentage(e.target.value)} className="w-full p-2 border rounded" placeholder="0"/></div>
                     <div><label className="block text-sm font-medium">Wastage (%)</label><input type="number" value={wastagePercentage} onChange={e => setWastagePercentage(e.target.value)} className="w-full p-2 border rounded" placeholder="0"/></div>
                 </div>
-                 <div>
-                    <label className="block text-sm font-medium">Amount Paid (₹)</label>
-                    <input type="number" value={amountPaid} onChange={e => setAmountPaid(e.target.value)} className="w-full p-2 border rounded" placeholder="0.00" required />
-                </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Bill Type</label>
                     <div className="flex gap-4">
@@ -623,6 +611,21 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                         <label className="flex items-center"><input type="radio" name="billType" value={BillType.INVOICE} checked={billType === BillType.INVOICE} onChange={() => handleBillTypeChange(BillType.INVOICE)} className="mr-2"/> Invoice</label>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">An 'Invoice' will deduct items from inventory. An 'Estimate' will not.</p>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium mb-1">Payment Status</label>
+                    <div className="flex items-center p-3 bg-gray-50 border rounded-lg">
+                        <input 
+                            type="checkbox" 
+                            id="isPaid" 
+                            checked={isPaid} 
+                            onChange={(e) => setIsPaid(e.target.checked)} 
+                            className="h-5 w-5 rounded border-gray-300 text-brand-gold focus:ring-brand-gold-dark"
+                        />
+                        <label htmlFor="isPaid" className="ml-3 block text-sm font-medium text-gray-700">
+                            Mark as Fully Paid
+                        </label>
+                    </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                     <button type="submit" value="download" disabled={submissionStatus !== 'idle'} className="w-full bg-brand-gold text-brand-charcoal p-3 rounded-lg font-semibold hover:bg-brand-gold-dark transition disabled:bg-gray-400 disabled:opacity-70">

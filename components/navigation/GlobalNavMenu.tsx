@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Page, CurrentUser } from '../../types';
 import { useUIContext } from '../../context/UIContext';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, AddUserIcon, LogoutIcon, PencilIcon, PendingIcon } from '../common/Icons';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, AddUserIcon, LogoutIcon, PencilIcon } from '../common/Icons';
 
 const GlobalNavMenu: React.FC<{
     currentUser: CurrentUser;
@@ -36,7 +36,6 @@ const GlobalNavMenu: React.FC<{
         ...baseNavItems,
         { page: 'INVENTORY' as Page, label: 'Inventory', icon: <InventoryIcon /> },
         { page: 'REPORTS' as Page, label: 'Reports', icon: <ReportsIcon /> },
-        { page: 'PENDING_PAYMENTS' as Page, label: 'Pending Payments', icon: <PendingIcon /> },
         { page: 'SETTINGS' as Page, label: 'Settings', icon: <SettingsIcon /> },
     ];
     const navItems = currentUser.role === 'admin' ? adminNavItems : baseNavItems;
