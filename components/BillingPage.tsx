@@ -50,8 +50,8 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
     const isPaid = grandTotal - amountPaid <= 0.01;
 
     return (
-        <div className="bg-brand-cream text-brand-charcoal font-sans flex flex-col" style={{ width: '842px', height: '595px', boxSizing: 'border-box' }}>
-            <div className="flex-grow relative overflow-hidden">
+        <div className="bg-brand-cream text-brand-charcoal font-sans flex flex-col" style={{ width: '842px', minHeight: '595px', boxSizing: 'border-box' }}>
+            <div className="flex-grow relative overflow-hidden p-8">
                 {/* Decorative Border */}
                 <div className="absolute inset-0 border-[1px] border-brand-gold-dark/30 z-0"></div>
                 <div className="absolute inset-2 border-[8px] border-brand-pale-gold z-0"></div>
@@ -62,19 +62,19 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                     <img src={logoUrl} alt="Watermark" className="w-[350px]"/>
                 </div>
                 
-                <div className="relative z-10 p-8 flex flex-col h-full">
+                <div className="relative z-10 flex flex-col h-full">
                     {/* Header */}
                     <header className="flex justify-between items-start pb-2 mb-2 border-b border-brand-gold-dark/30">
                         <div className="flex items-center">
                             <img src={logoUrl} alt="Logo" className="w-16 h-16" />
                             <div className="ml-3">
-                                <h2 className="text-3xl font-serif tracking-wider font-bold text-brand-charcoal">DEVAGIRIKAR</h2>
-                                <p className="text-lg text-brand-gold-dark tracking-[0.15em] -mt-1">JEWELLERYS</p>
+                                <h2 className="text-5xl font-serif tracking-wider font-bold text-brand-charcoal">DEVAGIRIKAR</h2>
+                                <p className="text-3xl text-brand-gold-dark tracking-[0.15em] -mt-1">JEWELLERYS</p>
                                 <p className="text-[10px] tracking-widest text-brand-gray mt-1">Real Source of Purity</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <h1 className="text-5xl font-serif font-light text-brand-gold-dark tracking-widest">{bill.type}</h1>
+                            <h1 className="text-2xl font-serif font-light text-brand-gold-dark tracking-widest">{bill.type}</h1>
                             <p className="text-xs mt-1 font-mono"><strong>Bill No:</strong> {bill.id}</p>
                             <p className="text-xs font-mono"><strong>GSTIN:</strong> 29BSWPD7616JZ0</p>
                             <p className="text-xs font-mono"><strong>Date:</strong> {new Date(bill.date).toLocaleDateString()}</p>
@@ -89,7 +89,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                     </section>
 
                     {/* Items Table */}
-                    <main>
+                    <main className="flex-grow">
                         <table className={`w-full border-collapse border border-brand-gold-dark/30 ${tableBaseFontSize}`} style={{ tableLayout: 'fixed' }}>
                             <thead className="border-b-2 border-brand-charcoal bg-brand-pale-gold/30">
                                 <tr>
@@ -102,12 +102,15 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                 </tr>
                             </thead>
                             <tbody>
-                                {bill.items.map(item => {
+                                {bill.items.map((item: BillItem) => {
                                     const quantity = item.quantity || 1;
                                     const amount = item.price * quantity;
                                     return (
                                         <tr key={item.itemId} className="border-b border-brand-gold-dark/20">
-                                            <td className={`font-medium border border-brand-gold-dark/30 ${tableCellClasses}`} style={{ wordBreak: 'break-word' }}>{item.name}</td>
+                                            <td className={`font-medium border border-brand-gold-dark/30 ${tableCellClasses}`} style={{ wordBreak: 'break-word' }}>
+                                                {item.name}
+                                                {item.category && <span className="text-gray-500 font-normal"> ({item.category})</span>}
+                                            </td>
                                             <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.serialNo}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(3)}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{quantity}</td>
@@ -121,8 +124,8 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                     </main>
 
                     {/* Summary Section */}
-                    <section className="mt-auto pt-2 border-t border-brand-gold-dark/30">
-                        <div className="flex justify-between items-start">
+                    <section className="mt-auto pt-2">
+                        <div className="flex justify-between items-start pt-2 border-t border-brand-gold-dark/30">
                              <div className="w-1/2 pr-4 text-xs">
                                 <p className="font-bold text-gray-700 capitalize">{numberToWords(grandTotal)}</p>
                                 <div className="mt-4 text-[10px] text-brand-gray">
@@ -370,7 +373,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setSelectedItems(prev => [...prev, { 
       itemId: item.id, 
       serialNo: item.serialNo, 
-      name: item.name, 
+      name: item.name,
+      category: item.category, 
       weight: item.weight, 
       price: price,
       quantity: 0
@@ -478,13 +482,10 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     const imgData = canvas.toDataURL('image/jpeg', 0.95);
                     
                     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
-                    const margin = 8;
                     const pdfWidth = pdf.internal.pageSize.getWidth();
                     const pdfHeight = pdf.internal.pageSize.getHeight();
-                    const contentWidth = pdfWidth - margin * 2;
-                    const contentHeight = pdfHeight - margin * 2;
                     
-                    pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, contentHeight);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                     resolve(pdf.output('blob'));
 
                 } catch (error) {
@@ -557,7 +558,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
           lessWeight: parseFloat(lessWeight) || 0,
           makingChargePercentage: parseFloat(makingChargePercentage) || 0,
           wastagePercentage: parseFloat(wastagePercentage) || 0,
-          amountPaid: calculations.grandTotal,
+          amountPaid: calculations.grandTotal, // All bills are fully paid
         });
         
         const customer = getCustomerById(selectedCustomerId);

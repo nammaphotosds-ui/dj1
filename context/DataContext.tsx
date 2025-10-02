@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { BillType, JewelryCategory } from '../types';
-import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog } from '../types';
+import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog, BillItem } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
 import * as drive from '../utils/googleDrive';
 import { hashPassword } from '../utils/crypto';
@@ -129,6 +129,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Data Loading Effect
   useEffect(() => {
+    const loadAndSetData = (content: any) => {
+        const inventoryData = content.inventory || [];
+        const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
+
+        const migratedBills = (content.bills || []).map((bill: Bill) => ({
+            ...bill,
+            // FIX: Explicitly type 'item' as 'any' to handle legacy data structures during migration without compile-time errors.
+            items: bill.items.map((item: any) => {
+                if (item.category) {
+                    return item; // Category already exists, no migration needed.
+                }
+                const inventoryItem = inventoryMap.get(item.itemId);
+                return {
+                    ...item,
+                    category: inventoryItem ? inventoryItem.category : 'N/A' // Add category, with a fallback.
+                };
+            })
+        }));
+
+        setInventory(inventoryData);
+        setRawCustomers(content.customers || []);
+        setBills(migratedBills);
+        setStaff(content.staff || []);
+        setDistributors(content.distributors || []);
+        setActivityLogs(content.activityLogs || []);
+        setAdminProfile(content.adminProfile || { name: 'Admin' });
+    };
+    
     const initData = async () => {
         isInitialLoad.current = true;
         setError(null);
@@ -136,13 +164,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const localData = localStorage.getItem('appDataCache');
         if (localData) {
             const data = JSON.parse(localData);
-            setInventory(data.inventory || []);
-            setRawCustomers(data.customers || []);
-            setBills(data.bills || []);
-            setStaff(data.staff || []);
-            setDistributors(data.distributors || []);
-            setActivityLogs(data.activityLogs || []);
-            setAdminProfile(data.adminProfile || { name: 'Admin' });
+            loadAndSetData(data);
         }
 
         if (currentUser?.role !== 'admin' || !tokenResponse || !tokenResponse.access_token) {
@@ -153,13 +175,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const fileId = await drive.getFileId(tokenResponse.access_token);
             if (fileId) {
                 const content = await drive.getFileContent(tokenResponse.access_token, fileId);
-                setInventory(content.inventory || []);
-                setRawCustomers(content.customers || []);
-                setBills(content.bills || []);
-                setStaff(content.staff || []);
-                setDistributors(content.distributors || []);
-                setActivityLogs(content.activityLogs || []);
-                setAdminProfile(content.adminProfile || { name: 'Admin' });
+                loadAndSetData(content);
                 setDriveFileId(fileId);
                 localStorage.setItem('appDataCache', JSON.stringify(content));
             } else {

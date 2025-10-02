@@ -31,6 +31,7 @@ export interface BillItem {
   itemId: string;
   serialNo: string;
   name: string;
+  category: string;
   weight: number;
   price: number;
   quantity: number;
