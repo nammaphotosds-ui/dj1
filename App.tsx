@@ -19,7 +19,6 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
-import SyncWithCodeScreen from './components/auth/SyncWithCodeScreen';
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
@@ -29,7 +28,41 @@ const AppContent: React.FC = () => {
     isAddDistributorModalOpen, closeAddDistributorModal
   } = useUIContext();
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
-  const [showSyncScreen, setShowSyncScreen] = useState(false);
+
+  useEffect(() => {
+    const handleSync = async () => {
+      const hash = window.location.hash;
+      const syncId = hash.startsWith('#sync-drive=') ? hash.substring('#sync-drive='.length) : null;
+      if (syncId) {
+        // Use a generic, user-facing API key for read-only public file access.
+        // This key is safe to expose in the frontend.
+        const apiKey = process.env.API_KEY; 
+        if (!apiKey) {
+            alert("Sync failed: API Key is not configured for this application.");
+            window.location.hash = '';
+            return;
+        }
+
+        const url = `https://www.googleapis.com/drive/v3/files/${syncId}?alt=media&key=${apiKey}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Failed to download sync data (Status: ${response.status})`);
+            
+            const data = await response.json();
+            localStorage.setItem('appDataCache', JSON.stringify(data));
+            alert("Sync successful! The application will now reload.");
+            window.location.hash = ''; // Clear hash to prevent re-sync
+            window.location.reload();
+        } catch (err) {
+            console.error(err);
+            alert(`Sync failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            window.location.hash = '';
+        }
+      }
+    };
+    handleSync();
+  }, []);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -56,18 +89,10 @@ const AppContent: React.FC = () => {
       );
   }
 
-  if (showSyncScreen) {
-    return (
-        <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <SyncWithCodeScreen onBack={() => setShowSyncScreen(false)} />
-        </div>
-    );
-  }
-
   if (!currentUser) {
       return (
         <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <LoginFlow onSync={() => setShowSyncScreen(true)} />
+            <LoginFlow />
         </div>
       );
   }

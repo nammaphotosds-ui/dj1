@@ -34,9 +34,8 @@ interface DataContextType {
   addDistributor: (distributor: Omit<Distributor, 'id'>) => Promise<void>;
   deleteDistributor: (distributorId: string) => Promise<void>;
   recordPaymentForBill: (billId: string, amount: number) => Promise<void>;
-  // FIX: Add recordPayment to resolve error in RecordPaymentForm.tsx
   recordPayment: (customerId: string, amount: number) => Promise<void>;
-  getSyncDataPayload: () => object;
+  createSyncSession: () => Promise<string>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -135,31 +134,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const inventoryData = content.inventory || [];
         const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
 
-        // FIX: Handle legacy bill structures by safely checking for the 'category' property
-        // and adding it if it's missing. This prevents errors with old data formats.
         const migratedBills = (content.bills || []).map((bill: Bill) => {
             if (!bill || !Array.isArray(bill.items)) {
                 return bill;
             }
-            // FIX: Safely handle migration of legacy bill items that may be of 'unknown' type
-            // and lack the 'category' property. This uses type guards to prevent runtime errors.
             const items = (bill.items || []).map((item: unknown) => {
-                // Type guard to ensure item is a processable object.
                 if (typeof item !== 'object' || item === null) {
                     return item;
                 }
-
-                // If item already has a valid category, return it as is.
                 if ('category' in item && typeof (item as { category: unknown }).category === 'string') {
                     return item as BillItem;
                 }
-
-                // For legacy items without a category, find it from the inventory using itemId.
                 let inventoryItem;
                 if ('itemId' in item && typeof (item as { itemId: unknown }).itemId === 'string') {
                     inventoryItem = inventoryMap.get((item as { itemId: string }).itemId);
                 }
-
                 return {
                     ...(item as object),
                     category: inventoryItem ? inventoryItem.category : 'N/A',
@@ -178,6 +167,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAdminProfile(content.adminProfile || { name: 'Admin' });
     };
     
+    const cleanupSyncFiles = async (accessToken: string) => {
+      try {
+        const oldFileIds = await drive.findOldSyncFiles(accessToken);
+        for (const fileId of oldFileIds) {
+          await drive.deleteFile(accessToken, fileId);
+          console.log(`Cleaned up old sync file: ${fileId}`);
+        }
+      } catch (e) {
+        console.warn("Could not clean up old sync files:", e);
+      }
+    };
+    
     const initData = async () => {
         isInitialLoad.current = true;
         setError(null);
@@ -193,6 +194,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         try {
+            // Run cleanup in the background, don't block UI
+            cleanupSyncFiles(tokenResponse.access_token);
+          
             const fileId = await drive.getFileId(tokenResponse.access_token);
             if (fileId) {
                 const content = await drive.getFileContent(tokenResponse.access_token, fileId);
@@ -443,8 +447,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (distToDelete) logActivity(`Deleted distributor: ${distToDelete.name}`);
   };
   
-  const getSyncDataPayload = () => {
-      return { inventory, customers: rawCustomers, bills, staff, distributors, adminProfile };
+  const createSyncSession = async (): Promise<string> => {
+    if (currentUser?.role !== 'admin' || !tokenResponse?.access_token) {
+        throw new Error("Only an admin can create a sync session.");
+    }
+    const dataPayload = { inventory, customers: rawCustomers, bills, staff, distributors, adminProfile };
+    const fileName = `sync-data-${Date.now()}.json`;
+    
+    const fileId = await drive.createFile(tokenResponse.access_token, dataPayload, fileName);
+    await drive.shareFilePublicly(tokenResponse.access_token, fileId);
+    
+    return fileId;
   };
 
   const getCustomerById = (id: string) => customers.find(c => c.id === id);
@@ -452,7 +465,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, createSyncSession }}>
       {children}
     </DataContext.Provider>
   );

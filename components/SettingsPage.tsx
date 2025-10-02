@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
-import SyncCodeModal from './settings/SyncCodeModal';
+import SyncLinkModal from './settings/SyncLinkModal';
 
 const SettingsPage: React.FC = () => {
     const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
@@ -77,11 +77,11 @@ const SettingsPage: React.FC = () => {
             
             <div className="bg-white p-6 rounded-lg shadow-md border">
                 <h2 className="text-xl font-bold mb-2">Device Sync</h2>
-                <p className="text-gray-600 mb-4">Share application data with a new staff device by generating a temporary 6-digit code.</p>
+                <p className="text-gray-600 mb-4">Share application data with a new staff device by generating a secure, one-time link.</p>
                 <button onClick={() => setIsSyncModalOpen(true)} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
-                    Create Sync Code
+                    Create Sync Link
                 </button>
-                <SyncCodeModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
+                <SyncLinkModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md border">
