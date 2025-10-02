@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
+import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useUIContext } from '../context/UIContext';
+import { useAuthContext } from '../context/AuthContext';
 import type { Customer, Bill } from '../types';
 import Avatar from './common/Avatar';
-import { AddUserIcon } from './common/Icons';
+import { AddUserIcon, SendIcon } from './common/Icons';
 
 // --- Helper Functions & Components ---
 
@@ -136,6 +138,142 @@ const CustomerProfileTemplate: React.FC<{ customer: Customer; bills: Bill[] }> =
 };
 
 // --- Page Components ---
+
+const BirthdayReminders: React.FC = () => {
+    const { customers } = useDataContext();
+
+    const upcomingBirthdays = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(today.getDate() + 30);
+        
+        return customers
+            .filter(c => !!c.dob)
+            .map(c => {
+                const dob = new Date(c.dob + 'T00:00:00');
+                let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+                
+                if (nextBirthday < today) {
+                    nextBirthday.setFullYear(today.getFullYear() + 1);
+                }
+                
+                return { ...c, nextBirthday };
+            })
+            .filter(c => c.nextBirthday >= today && c.nextBirthday <= thirtyDaysFromNow)
+            .sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
+
+    }, [customers]);
+
+    const handleSendWish = (customer: Customer) => {
+        const message = `🎉 Happy Birthday, ${customer.name}! 🎂\n\nWishing you a day filled with joy and a year full of success. Best wishes from all of us at DEVAGIRIKAR JEWELLERYS! ✨`;
+        const cleanPhone = customer.phone.replace(/\D/g, '');
+        const whatsappPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+        toast.success(`Opening WhatsApp for ${customer.name}...`);
+    };
+
+    if (upcomingBirthdays.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
+            <h2 className="text-xl font-bold mb-4">Upcoming Birthdays</h2>
+            <div className="space-y-3 max-h-72 overflow-y-auto">
+                {upcomingBirthdays.map(customer => (
+                    <div key={customer.id} className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-gray-50">
+                        <div className="flex items-center">
+                            <div className="w-10 h-10 rounded-full mr-3 bg-brand-gold-light flex items-center justify-center font-bold text-brand-gold-dark text-lg flex-shrink-0">
+                                🎂
+                            </div>
+                            <div>
+                                <p className="font-semibold">{customer.name}</p>
+                                <p className="text-xs text-gray-500">{customer.nextBirthday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => handleSendWish(customer)} className="bg-green-100 text-green-800 px-3 py-1 rounded-md text-xs font-semibold hover:bg-green-200 transition">
+                            Send Wish
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const FestivalGreetings: React.FC = () => {
+    const { customers } = useDataContext();
+    const [message, setMessage] = useState("Warm festival greetings from DEVAGIRIKAR JEWELLERYS! ✨\n\nMay this festive season bring you and your family joy, prosperity, and good fortune.");
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredCustomers = useMemo(() => {
+        if (!searchTerm) return customers;
+        return customers.filter(c =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.phone.includes(searchTerm)
+        );
+    }, [customers, searchTerm]);
+    
+    const handleSendGreeting = (customer: Customer) => {
+        if (!message.trim()) {
+            toast.error("Please write a greeting message first.");
+            return;
+        }
+        const cleanPhone = customer.phone.replace(/\D/g, '');
+        const whatsappPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    return (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
+            <h2 className="text-xl font-bold mb-4">Send Festival Greetings</h2>
+            <div>
+                <label htmlFor="festivalMessage" className="block text-sm font-medium text-gray-700 mb-1">Greeting Message</label>
+                <textarea
+                    id="festivalMessage"
+                    rows={4}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                    placeholder="Enter your festival greeting message here..."
+                />
+            </div>
+            <div className="mt-4">
+                <input
+                    type="text"
+                    placeholder="Search customers to send greetings..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                />
+            </div>
+            <div className="mt-4 max-h-60 overflow-y-auto space-y-2 pr-2">
+                {filteredCustomers.map(customer => (
+                    <div key={customer.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div>
+                            <p className="font-semibold">{customer.name}</p>
+                            <p className="text-xs text-gray-500">{customer.phone}</p>
+                        </div>
+                        <button 
+                            onClick={() => handleSendGreeting(customer)} 
+                            disabled={!message.trim()}
+                            className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-xs font-semibold hover:bg-blue-200 transition disabled:bg-gray-200 disabled:text-gray-500"
+                        >
+                            <SendIcon /> Send
+                        </button>
+                    </div>
+                ))}
+                 {filteredCustomers.length === 0 && <p className="text-center text-gray-500 py-4">No customers found.</p>}
+            </div>
+        </div>
+    );
+}
+
 
 const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> = ({ customer, onBack }) => {
     const { getBillsByCustomerId, deleteCustomer } = useDataContext();
@@ -283,13 +421,19 @@ const CustomerListView: React.FC<{ onCustomerSelect: (customer: Customer) => voi
 export const CustomersPage: React.FC = () => {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const { openAddCustomerModal } = useUIContext();
+    const { currentUser } = useAuthContext();
+    const isAdmin = currentUser?.role === 'admin';
 
     return (
         <div>
             {selectedCustomer ? (
                 <CustomerDetailView customer={selectedCustomer} onBack={() => setSelectedCustomer(null)} />
             ) : (
-                <CustomerListView onCustomerSelect={setSelectedCustomer} />
+                <div className="space-y-6">
+                    {isAdmin && <BirthdayReminders />}
+                    {isAdmin && <FestivalGreetings />}
+                    <CustomerListView onCustomerSelect={setSelectedCustomer} />
+                </div>
             )}
 
             {!selectedCustomer && (

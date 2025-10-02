@@ -121,6 +121,10 @@ const SalesChart: React.FC = () => {
 const ActivityLogFeed: React.FC = () => {
     const { activityLogs, staff } = useDataContext();
     
+    const filteredLogs = useMemo(() => {
+        return activityLogs.filter(log => log.userId !== 'admin');
+    }, [activityLogs]);
+
     const staffNameMap = useMemo(() => {
         const map = new Map<string, string>();
         staff.forEach(s => map.set(s.id, s.name));
@@ -130,9 +134,9 @@ const ActivityLogFeed: React.FC = () => {
 
     return (
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
-          <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
+          <h2 className="text-xl font-bold mb-4">Recent Staff Activity</h2>
           <div className="space-y-3 max-h-72 overflow-y-auto">
-            {activityLogs.slice(0, 10).map(log => (
+            {filteredLogs.slice(0, 10).map(log => (
               <div key={log.id} className="flex items-start text-sm">
                  <div className="w-10 h-10 rounded-full mr-3 bg-brand-gold-light flex items-center justify-center font-bold text-brand-gold-dark text-xs flex-shrink-0">
                     {staffNameMap.get(log.userId)?.substring(0,2) || log.userId.substring(0,2)}
@@ -143,62 +147,11 @@ const ActivityLogFeed: React.FC = () => {
                 </div>
               </div>
             ))}
-             {activityLogs.length === 0 && <p className="text-gray-500 text-center py-4">No recent activity.</p>}
+             {filteredLogs.length === 0 && <p className="text-gray-500 text-center py-4">No recent staff activity.</p>}
           </div>
         </div>
     )
 }
-
-const BirthdayReminders: React.FC = () => {
-    const { customers } = useDataContext();
-
-    const upcomingBirthdays = useMemo(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
-        
-        return customers
-            .filter(c => !!c.dob)
-            .map(c => {
-                const dob = new Date(c.dob + 'T00:00:00');
-                let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
-                
-                if (nextBirthday < today) {
-                    nextBirthday.setFullYear(today.getFullYear() + 1);
-                }
-                
-                return { ...c, nextBirthday };
-            })
-            .filter(c => c.nextBirthday >= today && c.nextBirthday <= thirtyDaysFromNow)
-            .sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
-
-    }, [customers]);
-
-    if (upcomingBirthdays.length === 0) {
-        return null;
-    }
-
-    return (
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
-            <h2 className="text-xl font-bold mb-4">Upcoming Birthdays</h2>
-            <div className="space-y-3 max-h-72 overflow-y-auto">
-                {upcomingBirthdays.map(customer => (
-                    <div key={customer.id} className="flex items-center text-sm p-2 rounded-md hover:bg-gray-50">
-                        <div className="w-10 h-10 rounded-full mr-3 bg-brand-gold-light flex items-center justify-center font-bold text-brand-gold-dark text-lg flex-shrink-0">
-                            🎂
-                        </div>
-                        <div>
-                            <p className="font-semibold">{customer.name}</p>
-                            <p className="text-xs text-gray-500">{customer.nextBirthday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
 
 const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurrentPage}) => {
   const { inventory, customers, bills } = useDataContext();
@@ -250,8 +203,6 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
             </div>
           </div>
       )}
-      
-      {!isStaff && <BirthdayReminders />}
     </div>
   );
 };
