@@ -56,7 +56,6 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                             setTokenResponse(tokenData);
                             setCurrentUser({ role: 'admin', id: 'admin' });
                             setError(null);
-                            window.location.reload();
                         }
                     },
                 });
