@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../../context/DataContext';
 import { JewelryCategory } from '../../types';
@@ -14,8 +14,19 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
     const [quantity, setQuantity] = useState('1');
     const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'generating' | 'saving' | 'saved'>('idle');
 
+    useEffect(() => {
+        if (category !== JewelryCategory.GOLD) {
+            setPurity('');
+        }
+    }, [category]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (category === JewelryCategory.GOLD && !purity.trim()) {
+            toast.error("Purity is required for Gold items.");
+            return;
+        }
         
         setSubmissionStatus('generating');
         const generatingToast = toast.loading('Generating AI product image...');
@@ -46,7 +57,7 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                 category,
                 distributorId,
                 weight: parseFloat(weight),
-                purity: parseFloat(purity),
+                purity: category === JewelryCategory.GOLD ? parseFloat(purity) : 0,
                 quantity: parseInt(quantity, 10),
                 imageUrl: imageUrl,
             });
@@ -78,9 +89,11 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                     {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <input type="number" step="0.01" placeholder="Weight (grams)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full p-2 border rounded" required/>
-                <input type="number" step="0.1" placeholder="Purity (carat)" value={purity} onChange={e => setPurity(e.target.value)} className="w-full p-2 border rounded" required/>
+            <div className={`grid ${category === JewelryCategory.GOLD ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                <input type="number" step="0.001" placeholder="Weight (grams)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full p-2 border rounded" required/>
+                {category === JewelryCategory.GOLD && (
+                    <input type="number" step="0.1" placeholder="Purity (carat)" value={purity} onChange={e => setPurity(e.target.value)} className="w-full p-2 border rounded" required/>
+                )}
             </div>
             <input type="number" placeholder="Quantity" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2 border rounded" required min="1"/>
             <button
@@ -94,6 +107,7 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                         : 'bg-brand-gold text-brand-charcoal hover:bg-brand-gold-dark'
                 }`}
             >
+              {/* FIX: Corrected typo in button text logic. */}
               {submissionStatus === 'generating' ? 'Generating Image...' : submissionStatus === 'saving' ? 'Saving...' : submissionStatus === 'saved' ? 'Saved!' : 'Add Item'}
             </button>
         </form>
