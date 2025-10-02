@@ -133,22 +133,39 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const inventoryData = content.inventory || [];
         const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
 
-        // FIX: Handle legacy bill structures by using a type guard to check for `category`.
-        // This safely migrates old data where items might be `unknown` or lack properties.
-        const migratedBills = (content.bills || []).map((bill: any) => ({
-            ...bill,
-            items: (bill.items || []).map((item: any) => {
-                if (item && typeof item === 'object' && 'category' in item) {
-                    return item; // Category already exists, no migration needed.
+        // FIX: Handle legacy bill structures by safely checking for the 'category' property
+        // and adding it if it's missing. This prevents errors with old data formats.
+        const migratedBills = (content.bills || []).map((bill: Bill) => {
+            if (!bill || !Array.isArray(bill.items)) {
+                return bill;
+            }
+            // FIX: Safely handle migration of legacy bill items that may be of 'unknown' type
+            // and lack the 'category' property. This uses type guards to prevent runtime errors.
+            const items = (bill.items || []).map((item: unknown) => {
+                // Type guard to ensure item is a processable object.
+                if (typeof item !== 'object' || item === null) {
+                    return item;
                 }
-                const legacyItem = item as any;
-                const inventoryItem = inventoryMap.get(legacyItem?.itemId);
+
+                // If item already has a valid category, return it as is.
+                if ('category' in item && typeof (item as { category: unknown }).category === 'string') {
+                    return item as BillItem;
+                }
+
+                // For legacy items without a category, find it from the inventory using itemId.
+                let inventoryItem;
+                if ('itemId' in item && typeof (item as { itemId: unknown }).itemId === 'string') {
+                    inventoryItem = inventoryMap.get((item as { itemId: string }).itemId);
+                }
+
                 return {
-                    ...legacyItem,
-                    category: inventoryItem ? inventoryItem.category : 'N/A' // Add category, with a fallback.
+                    ...(item as object),
+                    category: inventoryItem ? inventoryItem.category : 'N/A',
                 };
-            })
-        }));
+            });
+            return { ...bill, items };
+        });
+
 
         setInventory(inventoryData);
         setRawCustomers(content.customers || []);
@@ -361,9 +378,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addStaff = async (newStaff: Omit<Staff, 'passwordHash'>, password: string) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
-    if (staff.some(s => s.id === newStaff.id)) throw new Error("Staff ID already exists.");
+    const trimmedId = newStaff.id.trim();
+    if (!trimmedId) throw new Error("Staff ID cannot be empty.");
+
+    if (staff.some(s => s.id.toLowerCase() === trimmedId.toLowerCase())) {
+        throw new Error("Staff ID already exists.");
+    }
+
     const passwordHash = await hashPassword(password);
-    const staffMember: Staff = { ...newStaff, passwordHash };
+    const staffMember: Staff = { ...newStaff, id: trimmedId, passwordHash };
     setStaff(prev => [...prev, staffMember]);
     logActivity(`Added new staff member: ${staffMember.name} (${staffMember.id})`);
   };

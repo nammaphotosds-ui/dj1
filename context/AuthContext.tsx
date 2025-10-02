@@ -2,13 +2,12 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import type { CurrentUser, GoogleTokenResponse, Staff } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { hashPassword } from '../utils/crypto';
-import { DataContext } from './DataContext';
 
 interface AuthContextType {
   currentUser: CurrentUser | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<CurrentUser | null>>;
   isInitialized: boolean;
-  loginAsStaff: (id: string, pass: string) => Promise<boolean>;
+  loginAsStaff: (staffList: Staff[], id: string, pass: string) => Promise<boolean>;
   error: string | null;
   tokenResponse: GoogleTokenResponse | null;
   setTokenResponse: React.Dispatch<React.SetStateAction<GoogleTokenResponse | null>>;
@@ -35,23 +34,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, [tokenResponse, currentUser, setCurrentUser]);
   
-  // We need to get staff data to perform login.
-  // This feels a bit like a circular dependency, but auth naturally depends on user data.
-  // DataContext will handle loading staff data. We just use it here.
-  const dataContext = useContext(DataContext);
-  
-  const loginAsStaff = async (id: string, pass: string): Promise<boolean> => {
-    if (!dataContext) {
-      console.error("DataContext not available for login");
-      setError("Application is not ready. Please try again.");
-      return false;
-    }
-    const staffMember = dataContext.staff.find(s => s.id === id);
+  const loginAsStaff = async (staffList: Staff[], id: string, pass: string): Promise<boolean> => {
+    const trimmedId = id.trim();
+    const trimmedPass = pass.trim();
+
+    if (!trimmedId || !trimmedPass) return false;
+
+    // Case-insensitive find
+    const staffMember = staffList.find(s => s.id.toLowerCase() === trimmedId.toLowerCase());
     if (!staffMember) return false;
     
-    const hash = await hashPassword(pass);
+    const hash = await hashPassword(trimmedPass);
     if (hash === staffMember.passwordHash) {
-        setCurrentUser({ role: 'staff', id });
+        // Use the correctly-cased ID from the database
+        setCurrentUser({ role: 'staff', id: staffMember.id });
         return true;
     }
     return false;

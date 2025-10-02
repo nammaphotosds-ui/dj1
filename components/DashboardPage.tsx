@@ -52,13 +52,14 @@ const CategoryWeights: React.FC = () => {
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100 h-full">
             <h2 className="text-xl font-bold mb-4 flex items-center"><WeightIcon /> <span className="ml-2">Weight by Category</span></h2>
             <div className="space-y-4">
-                {Object.entries(weights).map(([category, weight]) => (
+                {/* FIX: Replaced Object.entries with Object.keys to ensure proper type inference for `weight`. */}
+                {Object.keys(weights).map((category) => (
                     <div key={category} className="flex items-center justify-between text-lg">
                         <div className="flex items-center">
                             <span className={`w-4 h-4 rounded-full mr-3 shadow-inner ${categoryStyles[category as JewelryCategory].color}`}></span>
                             <span className="font-semibold">{categoryStyles[category as JewelryCategory].name}</span>
                         </div>
-                        <span className="font-bold text-brand-charcoal">{weight.toFixed(3)} g</span>
+                        <span className="font-bold text-brand-charcoal">{weights[category as JewelryCategory].toFixed(3)} g</span>
                     </div>
                 ))}
             </div>

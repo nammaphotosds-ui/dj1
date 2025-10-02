@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '../../context/AuthContext';
+import { useDataContext } from '../../context/DataContext';
 import type { GoogleTokenResponse } from '../../types';
 import Logo from '../common/Logo';
 
@@ -88,6 +89,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
 
 const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const { loginAsStaff } = useAuthContext();
+    const { staff } = useDataContext();
     const [staffId, setStaffId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -97,7 +99,7 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
-        const success = await loginAsStaff(staffId, password);
+        const success = await loginAsStaff(staff, staffId, password);
         if (!success) {
             setError('Invalid Staff ID or Password.');
         }
