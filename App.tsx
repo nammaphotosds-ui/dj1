@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import DashboardPage from './components/DashboardPage';
 import InventoryPage from './components/InventoryPage';
@@ -19,9 +19,9 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
-import SyncWithCodeScreen from './components/auth/SyncWithCodeScreen';
+import { toast } from 'react-hot-toast';
 
-const AppContent: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
+const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
   const { 
     isAddCustomerModalOpen, closeAddCustomerModal,
@@ -58,7 +58,7 @@ const AppContent: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
   if (!currentUser) {
       return (
         <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <LoginFlow onStartSync={onStartSync} />
+            <LoginFlow />
         </div>
       );
   }
@@ -142,16 +142,46 @@ const AppContent: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
 };
 
 const App: React.FC = () => {
-    const [showSyncScreen, setShowSyncScreen] = useState(false);
+    useEffect(() => {
+        const handleSyncFromUrl = async () => {
+            if (window.location.hash.startsWith('#sync=')) {
+                const syncId = window.location.hash.substring(6);
+                if (syncId) {
+                    const loadingToast = toast.loading('Syncing data...');
+                    try {
+                        const response = await fetch(`https://jsonblob.com/api/jsonBlob/${syncId}`);
+                        if (!response.ok) {
+                            throw new Error('Sync data not found or expired.');
+                        }
+                        const data = await response.json();
+                        
+                        // Basic validation
+                        if (typeof data !== 'object' || !('inventory' in data) || !('customers' in data)) {
+                            throw new Error('Invalid sync data format.');
+                        }
 
-    if (showSyncScreen) {
-        return (
-             <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-                <SyncWithCodeScreen onBack={() => setShowSyncScreen(false)} />
-             </div>
-        );
-    }
+                        localStorage.setItem('appDataCache', JSON.stringify(data));
+                        toast.dismiss(loadingToast);
+                        toast.success('Sync successful! Application will now reload.');
+                        
+                        // Clean the URL and reload
+                        setTimeout(() => {
+                           window.location.hash = '';
+                           window.location.reload();
+                        }, 1500);
+
+                    } catch (error) {
+                        toast.dismiss(loadingToast);
+                        toast.error(error instanceof Error ? error.message : 'Sync failed. Please try again.');
+                         window.location.hash = '';
+                    }
+                }
+            }
+        };
+
+        handleSyncFromUrl();
+    }, []);
     
-    return <AppContent onStartSync={() => setShowSyncScreen(true)} />;
+    return <AppContent />;
 }
 export default App;

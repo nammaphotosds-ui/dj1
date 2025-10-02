@@ -123,7 +123,7 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     );
 };
 
-const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => void; onStartSync: () => void; }> = ({ onSelectRole, onStartSync }) => {
+const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => void; }> = ({ onSelectRole }) => {
      return (
         <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
             <div className="flex flex-col items-center text-center mb-16">
@@ -135,17 +135,17 @@ const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => 
                 <button onClick={() => onSelectRole('admin')} className="w-full p-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Admin Login</button>
                 <button onClick={() => onSelectRole('staff')} className="w-full p-4 bg-brand-gold text-brand-charcoal font-semibold rounded-lg shadow-md hover:bg-brand-gold-dark transition">Staff Login</button>
             </div>
-             <div className="mt-8">
-                 <button onClick={onStartSync} className="text-blue-600 font-semibold text-sm hover:underline">
-                    First Time on a New Device? Sync with a Code
-                </button>
+             <div className="mt-8 text-center">
+                 <p className="text-sm text-gray-600">
+                    First time on a new device? Ask an admin to create a Sync Link for you from their Settings page.
+                </p>
             </div>
         </div>
     );
 };
 
 
-const LoginFlow: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
+const LoginFlow: React.FC = () => {
     const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
     
     switch(loginType) {
@@ -155,7 +155,7 @@ const LoginFlow: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
             return <StaffLoginScreen onBack={() => setLoginType('chooser')} />;
         case 'chooser':
         default:
-             return <LoginChooserScreen onSelectRole={setLoginType} onStartSync={onStartSync} />;
+             return <LoginChooserScreen onSelectRole={setLoginType} />;
     }
 }
 
