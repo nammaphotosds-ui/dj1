@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
-import { Page, JewelryCategory } from '../types';
+import { Page, JewelryCategory, Bill, BillItem } from '../types';
 import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon } from './common/Icons';
 
 declare const Chart: any;
@@ -159,36 +159,57 @@ const SalesChart: React.FC = () => {
     );
 };
 
-const ActivityLogFeed: React.FC = () => {
-    const { activityLogs, staff } = useDataContext();
-    
-    const filteredLogs = useMemo(() => {
-        return activityLogs.filter(log => log.userId !== 'admin');
-    }, [activityLogs]);
+const RecentTransactions: React.FC = () => {
+    const { bills, inventory, getCustomerById } = useDataContext();
 
-    const staffNameMap = useMemo(() => {
-        const map = new Map<string, string>();
-        staff.forEach(s => map.set(s.id, s.name));
-        map.set('admin', 'Admin');
-        return map;
-    }, [staff]);
+    const recentBills = useMemo(() => {
+        return [...bills].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+    }, [bills]);
+
+    const inventoryMap = useMemo(() => {
+        return new Map(inventory.map(item => [item.id, item]));
+    }, [inventory]);
+
+    const formatItemSummary = (items: BillItem[]) => {
+        const summary: Record<string, number> = {};
+        items.forEach(item => {
+            const inventoryItem = inventoryMap.get(item.itemId);
+            if (inventoryItem) {
+                if (!summary[inventoryItem.category]) {
+                    summary[inventoryItem.category] = 0;
+                }
+                summary[inventoryItem.category] += item.weight * item.quantity;
+            }
+        });
+        
+        if (Object.keys(summary).length === 0) return <span className="text-gray-500">No items</span>;
+
+        return Object.entries(summary).map(([category, weight]) => (
+            <span key={category} className="mr-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                {category}: <span className="font-semibold">{weight.toFixed(2)}g</span>
+            </span>
+        ));
+    };
 
     return (
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
-          <h2 className="text-xl font-bold mb-4">Recent Staff Activity</h2>
+          <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
           <div className="space-y-3 max-h-72 overflow-y-auto">
-            {filteredLogs.slice(0, 10).map(log => (
-              <div key={log.id} className="flex items-start text-sm">
-                 <div className="w-10 h-10 rounded-full mr-3 bg-brand-gold-light flex items-center justify-center font-bold text-brand-gold-dark text-xs flex-shrink-0">
-                    {staffNameMap.get(log.userId)?.substring(0,2) || log.userId.substring(0,2)}
-                 </div>
-                <div>
-                  <p><span className="font-semibold">{staffNameMap.get(log.userId) || log.userId}</span> {log.message.split(staffNameMap.get(log.userId) || log.userId)[1]}</p>
-                  <p className="text-xs text-gray-400">{new Date(log.timestamp).toLocaleString()}</p>
+            {recentBills.map(bill => (
+              <div key={bill.id} className="border-b pb-2 last:border-b-0">
+                <div className="flex justify-between items-center text-sm">
+                    <div>
+                        <p className="font-semibold">{bill.customerName}</p>
+                        <p className="text-xs text-gray-400">{new Date(bill.date).toLocaleString()}</p>
+                    </div>
+                    <p className="font-bold text-brand-charcoal">₹{bill.grandTotal.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="mt-2 text-xs">
+                    {formatItemSummary(bill.items)}
                 </div>
               </div>
             ))}
-             {filteredLogs.length === 0 && <p className="text-gray-500 text-center py-4">No recent staff activity.</p>}
+             {recentBills.length === 0 && <p className="text-gray-500 text-center py-4">No recent transactions.</p>}
           </div>
         </div>
     )
@@ -239,7 +260,7 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
                 <SalesChart />
             </div>
             <div className="lg:col-span-2">
-                <ActivityLogFeed />
+                <RecentTransactions />
             </div>
           </div>
       )}

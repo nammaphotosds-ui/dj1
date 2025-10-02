@@ -1,12 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
 
 const SettingsPage: React.FC = () => {
     const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
-    const { resetTransactions } = useDataContext();
+    const { resetTransactions, adminProfile, updateAdminName } = useDataContext();
+    const [adminName, setAdminName] = useState(adminProfile.name);
 
+    useEffect(() => {
+        setAdminName(adminProfile.name);
+    }, [adminProfile]);
+
+    const handleNameSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!adminName.trim()) {
+            toast.error("Admin name cannot be empty.");
+            return;
+        }
+        try {
+            await updateAdminName(adminName);
+            toast.success("Admin name updated successfully.");
+        } catch (error) {
+            toast.error("Failed to update admin name.");
+        }
+    };
 
     const handleDisconnect = () => {
         if (tokenResponse) {
@@ -35,6 +53,26 @@ const SettingsPage: React.FC = () => {
 
     return (
         <div className="space-y-8">
+            <div className="bg-white p-6 rounded-lg shadow-md border">
+                <h2 className="text-xl font-bold mb-4">Admin Profile</h2>
+                <form onSubmit={handleNameSubmit} className="flex items-end gap-4">
+                    <div className="flex-grow">
+                        <label htmlFor="adminName" className="block text-sm font-medium text-gray-700">Display Name</label>
+                        <input
+                            type="text"
+                            id="adminName"
+                            value={adminName}
+                            onChange={(e) => setAdminName(e.target.value)}
+                            className="w-full p-2 border rounded mt-1"
+                            required
+                        />
+                    </div>
+                    <button type="submit" className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
+                        Save
+                    </button>
+                </form>
+            </div>
+
             <div className="bg-white p-6 rounded-lg shadow-md border">
                 <h2 className="text-xl font-bold mb-2">Google Drive Integration</h2>
                 <p className="text-gray-600 mb-4">Your application data is securely stored and synced with your connected Google Drive account.</p>

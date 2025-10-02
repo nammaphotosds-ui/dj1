@@ -14,7 +14,6 @@ export interface JewelryItem {
   quantity: number;
   dateAdded: string;
   distributorId: string;
-  imageUrl?: string;
 }
 
 export interface Customer {

@@ -16,20 +16,13 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 );
 
 const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCurrentPage }) => {
-    const { bills, staff, inventory, distributors } = useDataContext();
+    const { bills, inventory, distributors, userNameMap } = useDataContext();
     const today = new Date().toISOString().split('T')[0];
 
     const [reportType, setReportType] = useState<'customers' | 'distribution'>('customers');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
-    
-    const staffNameMap = useMemo(() => {
-        const map = new Map<string, string>();
-        staff.forEach(s => map.set(s.id, s.name));
-        map.set('admin', 'Admin');
-        return map;
-    }, [staff]);
 
     const distributorNameMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -134,7 +127,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
         if (reportType === 'customers') {
             data = filteredAndSortedBills.map(bill => ({
                 'Customer': bill.customerName,
-                'Created By': staffNameMap.get(bill.createdBy) || bill.createdBy,
+                'Created By': userNameMap.get(bill.createdBy) || bill.createdBy,
                 'Date': new Date(bill.date).toLocaleDateString(),
                 'Amount (INR)': bill.grandTotal,
                 'Type': bill.type,
@@ -224,7 +217,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                     {filteredAndSortedBills.map(bill => (
                                         <tr key={bill.id} className="border-b hover:bg-gray-50">
                                             <td className="p-3 font-semibold">{bill.customerName}</td>
-                                            <td className="p-3 hidden md:table-cell">{staffNameMap.get(bill.createdBy) || bill.createdBy}</td>
+                                            <td className="p-3 hidden md:table-cell">{userNameMap.get(bill.createdBy) || bill.createdBy}</td>
                                             <td className="p-3 text-sm text-gray-600">{new Date(bill.date).toLocaleDateString()}</td>
                                             <td className="p-3 text-right font-medium">{formatCurrency(bill.grandTotal)}</td>
                                             <td className="p-3 hidden md:table-cell text-xs"><span className={`px-2 py-1 rounded-full ${bill.type === 'INVOICE' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>{bill.type}</span></td>

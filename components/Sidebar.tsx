@@ -2,6 +2,7 @@ import React from 'react';
 import type { Page, CurrentUser } from '../types';
 import Logo from './common/Logo';
 import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, LogoutIcon, StaffIcon, DistributorIcon } from './common/Icons';
+import { useDataContext } from '../context/DataContext';
 
 const NavItem: React.FC<{
     page: Page;
@@ -32,6 +33,8 @@ const Sidebar: React.FC<{
     setCurrentPage: (page: Page) => void;
     onLogout: () => void;
 }> = ({ currentUser, currentPage, setCurrentPage, onLogout }) => {
+    const { userNameMap } = useDataContext();
+    const displayName = userNameMap.get(currentUser.id) || currentUser.id;
     
     const navItems = currentUser.role === 'admin'
         ? [
@@ -63,10 +66,10 @@ const Sidebar: React.FC<{
             <div className="p-4 border-t border-brand-charcoal-light">
                 <div className="flex items-center mb-4">
                     <div className="w-10 h-10 rounded-full bg-brand-gold-dark flex items-center justify-center font-bold">
-                        {currentUser.id.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                     </div>
                     <div className="ml-3">
-                        <p className="font-semibold text-sm capitalize">{currentUser.id}</p>
+                        <p className="font-semibold text-sm capitalize">{displayName}</p>
                         <p className="text-xs text-gray-400 capitalize">{currentUser.role}</p>
                     </div>
                 </div>

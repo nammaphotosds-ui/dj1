@@ -18,49 +18,30 @@ const InventoryStatCard: React.FC<{ title: string; value: string | number; icon:
     </div>
 );
 
-const ProductCard: React.FC<{ item: JewelryItem; onDelete: (itemId: string, itemName: string) => void; }> = ({ item, onDelete }) => {
-    const { distributors } = useDataContext();
-    const distributorName = distributors.find(d => d.id === item.distributorId)?.name || 'Unknown';
-    const placeholderSrc = `https://via.placeholder.com/300/D4AF37/FFFFFF?text=${item.name.charAt(0)}`;
-    const [imageSrc, setImageSrc] = useState(item.imageUrl || placeholderSrc);
-
-    const handleImageError = () => {
-        setImageSrc(placeholderSrc);
-    };
-
-    // Reset imageSrc if item imageUrl changes
-    useEffect(() => {
-        setImageSrc(item.imageUrl || placeholderSrc);
-    }, [item.imageUrl, item.name, placeholderSrc]);
-
+const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string, itemName: string) => void; }> = ({ item, onDelete }) => {
     return (
-        <div className="bg-white rounded-lg shadow-md border overflow-hidden group relative transition-shadow hover:shadow-xl">
-            <div className="aspect-square w-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                 <img 
-                    src={imageSrc} 
-                    alt={item.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={handleImageError}
-                    loading="lazy"
-                />
-            </div>
-            <div className="p-3 text-sm">
-                <h3 className="font-bold text-brand-charcoal truncate" title={item.name}>{item.name}</h3>
-                <p className="text-xs text-gray-500 truncate" title={distributorName}>From: {distributorName}</p>
-                <div className="flex justify-between items-center mt-2">
-                    <p className="text-gray-500">{item.category}</p>
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${item.quantity > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                        {item.quantity > 0 ? `Qty: ${item.quantity}` : 'Sold Out'}
-                    </span>
+        <div className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between transition-shadow hover:shadow-md">
+            <div className="flex-grow mr-4">
+                <p className="font-bold text-brand-charcoal truncate">{item.name}</p>
+                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mt-1">
+                    <span>ID: <span className="font-mono">{item.serialNo}</span></span>
+                    <span>Wt: <span className="font-mono">{item.weight.toFixed(3)}g</span></span>
+                    {item.category === JewelryCategory.GOLD && <span>Purity: <span className="font-mono">{item.purity}ct</span></span>}
+                    <span>Qty: <span className="font-mono">{item.quantity}</span></span>
                 </div>
             </div>
-             <button 
-                onClick={() => onDelete(item.id, item.name)} 
-                className="absolute top-2 right-2 bg-white/70 backdrop-blur-sm text-red-500 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
-                aria-label={`Delete ${item.name}`}
-             >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+                 <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${item.quantity > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                    {item.quantity > 0 ? 'In Stock' : 'Sold Out'}
+                 </span>
+                 <button 
+                    onClick={() => onDelete(item.id, item.name)} 
+                    className="text-red-500 rounded-full p-1.5 hover:bg-red-100"
+                    aria-label={`Delete ${item.name}`}
+                 >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
+            </div>
         </div>
     );
 };
@@ -144,11 +125,10 @@ const InventoryPage: React.FC = () => {
             <InventoryStatCard title="Total Stock" value={inventoryStats.totalStock} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>} />
         </div>
 
-        {/* Inventory Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="space-y-3">
             {filteredInventory.length > 0 ? (
                 filteredInventory.map(item => (
-                    <ProductCard key={item.id} item={item} onDelete={handleDelete} />
+                    <InventoryListItem key={item.id} item={item} onDelete={handleDelete} />
                 ))
             ) : (
                 <div className="text-center py-16 bg-white rounded-lg shadow-md col-span-full">

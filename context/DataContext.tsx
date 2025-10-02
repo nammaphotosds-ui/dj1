@@ -14,6 +14,9 @@ interface DataContextType {
   staff: Staff[];
   distributors: Distributor[];
   activityLogs: ActivityLog[];
+  adminProfile: { name: string };
+  userNameMap: Map<string, string>;
+  updateAdminName: (name: string) => Promise<void>;
   addInventoryItem: (item: Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>) => Promise<void>;
   deleteInventoryItem: (itemId: string) => Promise<void>;
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate' | 'createdBy' | 'pendingBalance'>) => Promise<void>;
@@ -44,6 +47,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [staff, setStaff] = useState<Staff[]>([]);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [adminProfile, setAdminProfile] = useState<{ name: string }>({ name: 'Admin' });
   
   const [driveFileId, setDriveFileId] = useLocalStorage<string | null>('driveFileId', null);
   const [error, setError] = useState<string | null>(null); // This might be better in AuthContext
@@ -65,6 +69,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { ...customer, pendingBalance: pendingBalance < 0.01 ? 0 : pendingBalance };
     });
   }, [rawCustomers, bills]);
+
+  const userNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    staff.forEach(s => map.set(s.id, s.name));
+    map.set('admin', adminProfile.name || 'Admin');
+    return map;
+  }, [staff, adminProfile]);
 
 
   // Activity Logger
@@ -104,7 +115,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         try {
             // FIX: Save rawCustomers without the calculated pendingBalance.
-            const dataToSave = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs };
+            const dataToSave = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
             await drive.updateFile(tokenResponse.access_token, driveFileId, dataToSave);
             localStorage.setItem('appDataCache', JSON.stringify(dataToSave));
             if (error) setError(null);
@@ -115,7 +126,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     saveDataToDrive();
-  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs]);
+  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile]);
 
   // Data Loading Effect
   useEffect(() => {
@@ -133,6 +144,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setStaff(data.staff || []);
             setDistributors(data.distributors || []);
             setActivityLogs(data.activityLogs || []);
+            setAdminProfile(data.adminProfile || { name: 'Admin' });
         }
 
         // Only admins can fetch from Drive
@@ -150,13 +162,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setStaff(content.staff || []);
                 setDistributors(content.distributors || []);
                 setActivityLogs(content.activityLogs || []);
+                setAdminProfile(content.adminProfile || { name: 'Admin' });
                 setDriveFileId(fileId);
                 localStorage.setItem('appDataCache', JSON.stringify(content));
             } else {
-                const initialState = { inventory: [], customers: [], bills: [], staff: [], distributors: [], activityLogs: [] };
+                const initialState = { inventory: [], customers: [], bills: [], staff: [], distributors: [], activityLogs: [], adminProfile: { name: 'Admin'} };
                 const newFileId = await drive.createFile(tokenResponse.access_token, initialState);
                 setDriveFileId(newFileId);
-                setInventory([]); setRawCustomers([]); setBills([]); setStaff([]); setDistributors([]); setActivityLogs([]);
+                setInventory([]); setRawCustomers([]); setBills([]); setStaff([]); setDistributors([]); setActivityLogs([]); setAdminProfile({ name: 'Admin' });
                 localStorage.setItem('appDataCache', JSON.stringify(initialState));
             }
         } catch (e: any) {
@@ -172,6 +185,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // FIX: Use rawCustomers length for new ID generation.
   const getNextCustomerId = () => `DJ${(rawCustomers.length + 1).toString().padStart(5, '0')}`;
+  
+  const updateAdminName = async (name: string) => {
+    if (currentUser?.role !== 'admin') throw new Error("Permission denied");
+    setAdminProfile({ name });
+    logActivity(`Updated admin display name to: ${name}`);
+  };
 
   const addInventoryItem = async (item: Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
@@ -380,7 +399,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, bills, staff, distributors, activityLogs, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPayment }}>
+    <DataContext.Provider value={{ inventory, customers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPayment }}>
       {children}
     </DataContext.Provider>
   );
