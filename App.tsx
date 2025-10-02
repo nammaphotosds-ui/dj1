@@ -14,7 +14,8 @@ import LoginFlow, { WelcomeScreen } from './components/auth/LoginFlow';
 import AppHeader from './components/common/AppHeader';
 import Modal from './components/common/Modal';
 import AddCustomerForm from './components/forms/AddCustomerForm';
-import GlobalNavMenu from './components/navigation/GlobalNavMenu';
+import Sidebar from './components/Sidebar';
+import BottomNavBar from './components/navigation/BottomNavBar';
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
@@ -75,28 +76,38 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="h-full font-sans text-brand-charcoal">
+    <div className="h-full font-sans text-brand-charcoal bg-brand-cream">
       <Toaster position="top-center" reverseOrder={false} />
-      <main className="h-full overflow-y-auto">
+      
+      <Sidebar 
+        currentUser={currentUser}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        onLogout={handleLogout}
+      />
+
+      <main className="h-full overflow-y-auto md:ml-64">
         <div 
-          className="px-4 md:p-8"
+          className="p-4 sm:p-6 lg:p-8"
            style={{ 
-              paddingTop: `calc(1rem + env(safe-area-inset-top, 0px))`, 
-              paddingBottom: `calc(6rem + env(safe-area-inset-bottom, 0px))`
+              paddingTop: `calc(1.5rem + env(safe-area-inset-top, 0px))`, 
+              paddingBottom: `calc(5rem + env(safe-area-inset-bottom, 0px))` // Padding for bottom nav
           }}
          >
             <AppHeader
               currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
             />
             {renderPage()}
         </div>
       </main>
+
       <Modal isOpen={isAddCustomerModalOpen} onClose={closeAddCustomerModal} title="Add New Customer">
           <AddCustomerForm onClose={closeAddCustomerModal} />
       </Modal>
-      <GlobalNavMenu
+
+      <BottomNavBar
         currentUser={currentUser}
+        currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
       />

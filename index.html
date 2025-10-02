@@ -59,12 +59,6 @@
 }
 </script>
 <style>
-  /* Ensure the app takes the full screen and apply background */
-  html {
-    /* This matches the tailwind 'bg-gradient-to-br from-brand-champagne to-brand-pale-gold' */
-    background-image: linear-gradient(to bottom right, #F7E7CE, #E8D5B1);
-    background-attachment: fixed; /* Keeps the gradient stable during scroll */
-  }
   html, body, #root {
     height: 100vh; /* Fallback for browsers that don't support --vh */
     height: calc(var(--vh, 1vh) * 100);
@@ -72,9 +66,6 @@
     margin: 0;
     padding: 0;
     overscroll-behavior: contain; /* Prevents pull-to-refresh & overscroll bounce */
-  }
-  body {
-    background-color: transparent; /* The background is now on the html element */
   }
 </style>
 </head>

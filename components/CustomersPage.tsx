@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { useDataContext } from '../context/DataContext';
+import { useUIContext } from '../context/UIContext';
 import type { Customer, Bill } from '../types';
 import Avatar from './common/Avatar';
+import { AddUserIcon } from './common/Icons';
 
 // --- Helper Functions & Components ---
 
@@ -232,6 +234,7 @@ const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> =
 const CustomerListView: React.FC<{ onCustomerSelect: (customer: Customer) => void }> = ({ onCustomerSelect }) => {
     const { customers } = useDataContext();
     const [searchTerm, setSearchTerm] = useState('');
+    const { openAddCustomerModal } = useUIContext();
 
     const filteredCustomers = useMemo(() => {
         return customers.filter(c =>
@@ -243,13 +246,21 @@ const CustomerListView: React.FC<{ onCustomerSelect: (customer: Customer) => voi
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-md border">
-            <input
-                type="text"
-                placeholder="Search customers by name, phone, or ID..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full p-3 border rounded-lg mb-4"
-            />
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <input
+                    type="text"
+                    placeholder="Search customers by name, phone, or ID..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full p-3 border rounded-lg flex-grow"
+                />
+                 <button 
+                    onClick={openAddCustomerModal}
+                    className="hidden md:flex items-center justify-center px-4 py-2 bg-brand-gold text-brand-charcoal rounded-lg font-semibold hover:bg-brand-gold-dark transition whitespace-nowrap"
+                >
+                    <AddUserIcon /> <span className="ml-2">Add Customer</span>
+                </button>
+            </div>
             <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                 {filteredCustomers.map(customer => (
                     <div key={customer.id} onClick={() => onCustomerSelect(customer)} className="flex items-center p-3 hover:bg-brand-gold-light rounded-lg cursor-pointer transition">
@@ -271,6 +282,7 @@ const CustomerListView: React.FC<{ onCustomerSelect: (customer: Customer) => voi
 
 export const CustomersPage: React.FC = () => {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const { openAddCustomerModal } = useUIContext();
 
     return (
         <div>
@@ -278,6 +290,16 @@ export const CustomersPage: React.FC = () => {
                 <CustomerDetailView customer={selectedCustomer} onBack={() => setSelectedCustomer(null)} />
             ) : (
                 <CustomerListView onCustomerSelect={setSelectedCustomer} />
+            )}
+
+            {!selectedCustomer && (
+                 <button 
+                    onClick={openAddCustomerModal}
+                    className="md:hidden fixed bottom-24 right-6 bg-brand-gold text-brand-charcoal w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-20"
+                    aria-label="Add new customer"
+                >
+                    <AddUserIcon />
+                </button>
             )}
         </div>
     );
