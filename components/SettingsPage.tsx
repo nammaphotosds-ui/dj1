@@ -2,20 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
-import useLocalStorage from '../hooks/useLocalStorage';
+import SyncCodeModal from './settings/SyncCodeModal';
 
 const SettingsPage: React.FC = () => {
     const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
     const { resetTransactions, adminProfile, updateAdminName } = useDataContext();
     const [adminName, setAdminName] = useState(adminProfile.name);
-    
-    const [adminPin, setAdminPin] = useLocalStorage('adminPin', '4145');
-    const [newAdminPin, setNewAdminPin] = useState('');
-    const [confirmAdminPin, setConfirmAdminPin] = useState('');
-    
-    const [staffPin, setStaffPin] = useLocalStorage('staffPin', '4004');
-    const [newStaffPin, setNewStaffPin] = useState('');
-    const [confirmStaffPin, setConfirmStaffPin] = useState('');
+    const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
     useEffect(() => {
         setAdminName(adminProfile.name);
@@ -45,7 +38,6 @@ const SettingsPage: React.FC = () => {
         }
         setTokenResponse(null);
         setCurrentUser(null);
-        sessionStorage.removeItem('dj1_pin_role');
         window.location.reload();
     };
 
@@ -59,40 +51,6 @@ const SettingsPage: React.FC = () => {
                 console.error("Reset data error:", error);
             }
         }
-    };
-
-    const handleAdminPinChange = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newAdminPin.length !== 4) {
-            toast.error("Admin PIN must be exactly 4 digits.");
-            return;
-        }
-        if (newAdminPin !== confirmAdminPin) {
-            toast.error("The new Admin PINs do not match.");
-            return;
-        }
-
-        setAdminPin(newAdminPin);
-        toast.success("Admin PIN updated successfully!");
-        setNewAdminPin('');
-        setConfirmAdminPin('');
-    };
-    
-    const handleStaffPinChange = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newStaffPin.length !== 4) {
-            toast.error("Staff PIN must be exactly 4 digits.");
-            return;
-        }
-        if (newStaffPin !== confirmStaffPin) {
-            toast.error("The new Staff PINs do not match.");
-            return;
-        }
-
-        setStaffPin(newStaffPin);
-        toast.success("Staff PIN updated successfully!");
-        setNewStaffPin('');
-        setConfirmStaffPin('');
     };
 
     return (
@@ -116,6 +74,15 @@ const SettingsPage: React.FC = () => {
                     </button>
                 </form>
             </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-md border">
+                <h2 className="text-xl font-bold mb-2">Device Sync</h2>
+                <p className="text-gray-600 mb-4">Share application data with a new staff device by generating a temporary sync code.</p>
+                <button onClick={() => setIsSyncModalOpen(true)} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
+                    Create Sync Code
+                </button>
+                <SyncCodeModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
+            </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md border">
                 <h2 className="text-xl font-bold mb-2">Google Drive Integration</h2>
@@ -133,64 +100,6 @@ const SettingsPage: React.FC = () => {
                         Disconnect Google Account
                     </button>
                 </div>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md border">
-                <h2 className="text-xl font-bold mb-4">Security Settings</h2>
-                
-                {/* Admin PIN Form */}
-                <form onSubmit={handleAdminPinChange} className="space-y-4 max-w-sm mb-6 border-b pb-6">
-                    <h3 className="text-lg font-semibold text-gray-800">Admin PIN</h3>
-                    <p className="text-sm text-gray-500 -mt-2">PIN for admins to access the application.</p>
-                    <div>
-                        <label htmlFor="newAdminPin" className="block text-sm font-medium text-gray-700">New 4-Digit Admin PIN</label>
-                        <input
-                            type="password" id="newAdminPin" value={newAdminPin}
-                            onChange={(e) => setNewAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            className="w-full p-2 border rounded mt-1 font-mono tracking-widest text-lg"
-                            maxLength={4} pattern="\d{4}" inputMode="numeric" required
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="confirmAdminPin" className="block text-sm font-medium text-gray-700">Confirm New Admin PIN</label>
-                        <input
-                            type="password" id="confirmAdminPin" value={confirmAdminPin}
-                            onChange={(e) => setConfirmAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            className="w-full p-2 border rounded mt-1 font-mono tracking-widest text-lg"
-                            maxLength={4} pattern="\d{4}" inputMode="numeric" required
-                        />
-                    </div>
-                    <button type="submit" className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
-                        Update Admin PIN
-                    </button>
-                </form>
-
-                {/* Staff PIN Form */}
-                <form onSubmit={handleStaffPinChange} className="space-y-4 max-w-sm mt-6">
-                    <h3 className="text-lg font-semibold text-gray-800">Staff PIN</h3>
-                    <p className="text-sm text-gray-500 -mt-2">Shared PIN for all staff to access the application.</p>
-                    <div>
-                        <label htmlFor="newStaffPin" className="block text-sm font-medium text-gray-700">New 4-Digit Staff PIN</label>
-                        <input
-                            type="password" id="newStaffPin" value={newStaffPin}
-                            onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            className="w-full p-2 border rounded mt-1 font-mono tracking-widest text-lg"
-                            maxLength={4} pattern="\d{4}" inputMode="numeric" required
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="confirmStaffPin" className="block text-sm font-medium text-gray-700">Confirm New Staff PIN</label>
-                        <input
-                            type="password" id="confirmStaffPin" value={confirmStaffPin}
-                            onChange={(e) => setConfirmStaffPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            className="w-full p-2 border rounded mt-1 font-mono tracking-widest text-lg"
-                            maxLength={4} pattern="\d{4}" inputMode="numeric" required
-                        />
-                    </div>
-                    <button type="submit" className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
-                        Update Staff PIN
-                    </button>
-                </form>
             </div>
 
             <div className="bg-red-50 p-6 rounded-lg shadow-inner border border-red-200">

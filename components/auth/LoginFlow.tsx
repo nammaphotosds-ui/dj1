@@ -82,7 +82,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                 {isConnecting ? 'Connecting...' : 'Connect with Google'}
              </button>
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
-             <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN entry</button>
+             <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to Role Selection</button>
         </div>
     );
 };
@@ -118,61 +118,45 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                 </button>
                 {error && <p className="text-red-600 text-sm">{error}</p>}
             </form>
-            <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN entry</button>
+            <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to Role Selection</button>
         </div>
     );
 };
 
-const LoginScreen: React.FC = () => {
-    const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
-    
-    const handleBackToChooser = () => setLoginType('chooser');
-
-    const renderContent = () => {
-        switch(loginType) {
-            case 'admin':
-                return <AdminLoginScreen onBack={handleBackToChooser} />;
-            case 'staff':
-                return <StaffLoginScreen onBack={handleBackToChooser} />;
-            case 'chooser':
-            default:
-                 return (
-                    <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
-                        <div className="flex flex-col items-center text-center mb-16">
-                            <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-40 h-40 object-contain mb-6"/>
-                            <h1 className="text-5xl font-serif tracking-wider">DEVAGIRIKAR</h1>
-                            <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
-                        </div>
-                        <div className="flex flex-col gap-4 w-full max-w-xs">
-                            <button onClick={() => setLoginType('admin')} className="w-full p-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Admin Login</button>
-                            <button onClick={() => setLoginType('staff')} className="w-full p-4 bg-brand-gold text-brand-charcoal font-semibold rounded-lg shadow-md hover:bg-brand-gold-dark transition">Staff Login</button>
-                        </div>
-                    </div>
-                );
-        }
-    };
-    
-    return renderContent();
+const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => void; onStartSync: () => void; }> = ({ onSelectRole, onStartSync }) => {
+     return (
+        <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
+            <div className="flex flex-col items-center text-center mb-16">
+                <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-40 h-40 object-contain mb-6"/>
+                <h1 className="text-5xl font-serif tracking-wider">DEVAGIRIKAR</h1>
+                <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
+            </div>
+            <div className="flex flex-col gap-4 w-full max-w-xs">
+                <button onClick={() => onSelectRole('admin')} className="w-full p-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Admin Login</button>
+                <button onClick={() => onSelectRole('staff')} className="w-full p-4 bg-brand-gold text-brand-charcoal font-semibold rounded-lg shadow-md hover:bg-brand-gold-dark transition">Staff Login</button>
+            </div>
+             <div className="mt-8">
+                 <button onClick={onStartSync} className="text-blue-600 font-semibold text-sm hover:underline">
+                    First Time on a New Device? Sync with a Code
+                </button>
+            </div>
+        </div>
+    );
 };
 
 
-const LoginFlow: React.FC<{ pinAuthRole: 'admin' | 'staff' | 'chooser' }> = ({ pinAuthRole }) => {
+const LoginFlow: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
+    const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
     
-    const handleBackToPin = () => {
-        sessionStorage.removeItem('dj1_pin_role');
-        window.location.reload();
-    };
-
-    if (pinAuthRole === 'admin') {
-        return <AdminLoginScreen onBack={handleBackToPin} />;
+    switch(loginType) {
+        case 'admin':
+            return <AdminLoginScreen onBack={() => setLoginType('chooser')} />;
+        case 'staff':
+            return <StaffLoginScreen onBack={() => setLoginType('chooser')} />;
+        case 'chooser':
+        default:
+             return <LoginChooserScreen onSelectRole={setLoginType} onStartSync={onStartSync} />;
     }
-    
-    if (pinAuthRole === 'staff') {
-        return <StaffLoginScreen onBack={handleBackToPin} />;
-    }
-
-    // Default to the chooser screen if role is 'chooser' or any other value
-    return <LoginScreen />;
 }
 
 export default LoginFlow;

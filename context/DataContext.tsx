@@ -10,6 +10,7 @@ import { useAuthContext } from './AuthContext';
 interface DataContextType {
   inventory: JewelryItem[];
   customers: Customer[];
+  rawCustomers: Omit<Customer, 'pendingBalance'>[];
   bills: Bill[];
   staff: Staff[];
   distributors: Distributor[];
@@ -446,7 +447,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment }}>
       {children}
     </DataContext.Provider>
   );

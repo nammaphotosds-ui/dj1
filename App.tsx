@@ -19,11 +19,9 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
-import PinEntryScreen from './components/auth/PinEntryScreen';
+import SyncWithCodeScreen from './components/auth/SyncWithCodeScreen';
 
-type PinAuthRole = 'admin' | 'staff' | 'chooser' | null;
-
-const AppContent: React.FC<{pinAuthRole: Exclude<PinAuthRole, null>}> = ({ pinAuthRole }) => {
+const AppContent: React.FC<{ onStartSync: () => void }> = ({ onStartSync }) => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
   const { 
     isAddCustomerModalOpen, closeAddCustomerModal,
@@ -34,8 +32,6 @@ const AppContent: React.FC<{pinAuthRole: Exclude<PinAuthRole, null>}> = ({ pinAu
 
   const handleLogout = () => {
     setCurrentUser(null);
-    // Also clear PIN session on logout
-    sessionStorage.removeItem('dj1_pin_role');
     window.location.reload();
   };
 
@@ -62,7 +58,7 @@ const AppContent: React.FC<{pinAuthRole: Exclude<PinAuthRole, null>}> = ({ pinAu
   if (!currentUser) {
       return (
         <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <LoginFlow pinAuthRole={pinAuthRole} />
+            <LoginFlow onStartSync={onStartSync} />
         </div>
       );
   }
@@ -146,30 +142,16 @@ const AppContent: React.FC<{pinAuthRole: Exclude<PinAuthRole, null>}> = ({ pinAu
 };
 
 const App: React.FC = () => {
-    const [pinAuthRole, setPinAuthRole] = useState<PinAuthRole>(() => {
-        return sessionStorage.getItem('dj1_pin_role') as PinAuthRole;
-    });
+    const [showSyncScreen, setShowSyncScreen] = useState(false);
 
-    const handlePinSuccess = (role: 'admin' | 'staff') => {
-        sessionStorage.setItem('dj1_pin_role', role);
-        setPinAuthRole(role);
-    };
-    
-    const handleProceedToLogin = () => {
-        // This function allows bypassing the PIN to get to the login screen chooser.
-        sessionStorage.setItem('dj1_pin_role', 'chooser');
-        setPinAuthRole('chooser');
-    }
-
-
-    if (!pinAuthRole) {
+    if (showSyncScreen) {
         return (
              <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-                 <PinEntryScreen onPinSuccess={handlePinSuccess} onProceedToLogin={handleProceedToLogin} />
+                <SyncWithCodeScreen onBack={() => setShowSyncScreen(false)} />
              </div>
         );
     }
     
-    return <AppContent pinAuthRole={pinAuthRole} />;
+    return <AppContent onStartSync={() => setShowSyncScreen(true)} />;
 }
 export default App;
