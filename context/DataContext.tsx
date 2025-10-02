@@ -35,7 +35,7 @@ interface DataContextType {
   deleteDistributor: (distributorId: string) => Promise<void>;
   recordPaymentForBill: (billId: string, amount: number) => Promise<void>;
   recordPayment: (customerId: string, amount: number) => Promise<void>;
-  createSyncSession: () => Promise<string>;
+  getSyncDataPayload: () => string;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -167,18 +167,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAdminProfile(content.adminProfile || { name: 'Admin' });
     };
     
-    const cleanupSyncFiles = async (accessToken: string) => {
-      try {
-        const oldFileIds = await drive.findOldSyncFiles(accessToken);
-        for (const fileId of oldFileIds) {
-          await drive.deleteFile(accessToken, fileId);
-          console.log(`Cleaned up old sync file: ${fileId}`);
-        }
-      } catch (e) {
-        console.warn("Could not clean up old sync files:", e);
-      }
-    };
-    
     const initData = async () => {
         isInitialLoad.current = true;
         setError(null);
@@ -194,9 +182,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         try {
-            // Run cleanup in the background, don't block UI
-            cleanupSyncFiles(tokenResponse.access_token);
-          
             const fileId = await drive.getFileId(tokenResponse.access_token);
             if (fileId) {
                 const content = await drive.getFileContent(tokenResponse.access_token, fileId);
@@ -447,17 +432,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (distToDelete) logActivity(`Deleted distributor: ${distToDelete.name}`);
   };
   
-  const createSyncSession = async (): Promise<string> => {
-    if (currentUser?.role !== 'admin' || !tokenResponse?.access_token) {
-        throw new Error("Only an admin can create a sync session.");
+  const getSyncDataPayload = (): string => {
+    if (currentUser?.role !== 'admin') {
+      throw new Error("Only an admin can create a sync session.");
     }
     const dataPayload = { inventory, customers: rawCustomers, bills, staff, distributors, adminProfile };
-    const fileName = `sync-data-${Date.now()}.json`;
-    
-    const fileId = await drive.createFile(tokenResponse.access_token, dataPayload, fileName);
-    await drive.shareFilePublicly(tokenResponse.access_token, fileId);
-    
-    return fileId;
+    // Compress and encode the data to make it smaller for copy-paste
+    const jsonString = JSON.stringify(dataPayload);
+    try {
+        // Using btoa for simple base64 encoding, which is sufficient here.
+        return btoa(jsonString);
+    } catch(e) {
+        console.error("Encoding failed", e);
+        return "";
+    }
   };
 
   const getCustomerById = (id: string) => customers.find(c => c.id === id);
@@ -465,7 +453,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, createSyncSession }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload }}>
       {children}
     </DataContext.Provider>
   );

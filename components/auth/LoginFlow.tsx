@@ -125,7 +125,8 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
 
 const LoginChooserScreen: React.FC<{ 
     onSelectRole: (role: 'admin' | 'staff') => void;
-}> = ({ onSelectRole }) => {
+    onSync: () => void;
+}> = ({ onSelectRole, onSync }) => {
      return (
         <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
             <div className="flex flex-col items-center text-center mb-16">
@@ -137,19 +138,17 @@ const LoginChooserScreen: React.FC<{
                 <button onClick={() => onSelectRole('admin')} className="w-full p-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Admin Login</button>
                 <button onClick={() => onSelectRole('staff')} className="w-full p-4 bg-brand-gold text-brand-charcoal font-semibold rounded-lg shadow-md hover:bg-brand-gold-dark transition">Staff Login</button>
             </div>
-             <div className="mt-8 text-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                 <p className="text-sm text-blue-800">
-                    <strong>Setting up a new device?</strong>
-                    <br />
-                    Ask an admin to go to Settings &gt; Device Sync to create a shareable link for you.
-                </p>
+             <div className="mt-8 text-center">
+                 <button onClick={onSync} className="text-sm text-gray-600 hover:text-brand-charcoal underline">
+                    First time on a new device? Sync with data from an admin.
+                </button>
             </div>
         </div>
     );
 };
 
 
-const LoginFlow: React.FC = () => {
+const LoginFlow: React.FC<{onSync: () => void}> = ({ onSync }) => {
     const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
     
     switch(loginType) {
@@ -159,7 +158,7 @@ const LoginFlow: React.FC = () => {
             return <StaffLoginScreen onBack={() => setLoginType('chooser')} />;
         case 'chooser':
         default:
-             return <LoginChooserScreen onSelectRole={setLoginType} />;
+             return <LoginChooserScreen onSelectRole={setLoginType} onSync={onSync} />;
     }
 }
 
