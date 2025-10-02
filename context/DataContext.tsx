@@ -137,7 +137,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // This safely migrates old data where items might be `unknown` or lack properties.
         const migratedBills = (content.bills || []).map((bill: any) => ({
             ...bill,
-            items: (bill.items || []).map((item: unknown) => {
+            items: (bill.items || []).map((item: any) => {
                 if (item && typeof item === 'object' && 'category' in item) {
                     return item; // Category already exists, no migration needed.
                 }

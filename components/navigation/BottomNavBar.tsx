@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Page, CurrentUser } from '../../types';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon } from '../common/Icons';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon, SettingsIcon } from '../common/Icons';
 
 const NavItem: React.FC<{
     page: Page;
@@ -33,6 +33,7 @@ const MoreMenu: React.FC<{
     const adminNavItems = [
         { label: 'Manage Staff', icon: <StaffIcon />, page: 'STAFF_MANAGEMENT' as Page },
         { label: 'Manage Distributors', icon: <DistributorIcon />, page: 'DISTRIBUTOR_MANAGEMENT' as Page },
+        { label: 'Settings', icon: <SettingsIcon />, page: 'SETTINGS' as Page },
     ];
     
     const handleNav = (page: Page) => {
