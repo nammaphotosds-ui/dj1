@@ -13,12 +13,18 @@ import LoginFlow, { WelcomeScreen } from './components/auth/LoginFlow';
 import AppHeader from './components/common/AppHeader';
 import Modal from './components/common/Modal';
 import AddCustomerForm from './components/forms/AddCustomerForm';
+import AddStaffForm from './components/forms/AddStaffForm';
+import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
-  const { isAddCustomerModalOpen, closeAddCustomerModal } = useUIContext();
+  const { 
+    isAddCustomerModalOpen, closeAddCustomerModal,
+    isAddStaffModalOpen, closeAddStaffModal,
+    isAddDistributorModalOpen, closeAddDistributorModal
+  } = useUIContext();
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
 
   const handleLogout = () => {
@@ -100,6 +106,14 @@ const AppContent: React.FC = () => {
 
       <Modal isOpen={isAddCustomerModalOpen} onClose={closeAddCustomerModal} title="Add New Customer">
           <AddCustomerForm onClose={closeAddCustomerModal} />
+      </Modal>
+
+      <Modal isOpen={isAddStaffModalOpen} onClose={closeAddStaffModal} title="Add New Staff Member">
+          <AddStaffForm onClose={closeAddStaffModal} />
+      </Modal>
+
+      <Modal isOpen={isAddDistributorModalOpen} onClose={closeAddDistributorModal} title="Add New Distributor">
+          <AddDistributorForm onClose={closeAddDistributorModal} />
       </Modal>
 
       <BottomNavBar

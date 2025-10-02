@@ -4,6 +4,12 @@ interface UIContextType {
   isAddCustomerModalOpen: boolean;
   openAddCustomerModal: () => void;
   closeAddCustomerModal: () => void;
+  isAddStaffModalOpen: boolean;
+  openAddStaffModal: () => void;
+  closeAddStaffModal: () => void;
+  isAddDistributorModalOpen: boolean;
+  openAddDistributorModal: () => void;
+  closeAddDistributorModal: () => void;
   isFullscreen: boolean;
   toggleFullscreen: () => void;
   initialInventoryFilter: string | null;
@@ -14,6 +20,8 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  const [isAddDistributorModalOpen, setIsAddDistributorModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const [initialInventoryFilter, setInitialInventoryFilter] = useState<string | null>(null);
 
@@ -34,8 +42,20 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const openAddCustomerModal = () => setIsAddCustomerModalOpen(true);
   const closeAddCustomerModal = () => setIsAddCustomerModalOpen(false);
 
+  const openAddStaffModal = () => setIsAddStaffModalOpen(true);
+  const closeAddStaffModal = () => setIsAddStaffModalOpen(false);
+
+  const openAddDistributorModal = () => setIsAddDistributorModalOpen(true);
+  const closeAddDistributorModal = () => setIsAddDistributorModalOpen(false);
+
   return (
-    <UIContext.Provider value={{ isAddCustomerModalOpen, openAddCustomerModal, closeAddCustomerModal, isFullscreen, toggleFullscreen, initialInventoryFilter, setInitialInventoryFilter }}>
+    <UIContext.Provider value={{ 
+        isAddCustomerModalOpen, openAddCustomerModal, closeAddCustomerModal, 
+        isAddStaffModalOpen, openAddStaffModal, closeAddStaffModal,
+        isAddDistributorModalOpen, openAddDistributorModal, closeAddDistributorModal,
+        isFullscreen, toggleFullscreen, 
+        initialInventoryFilter, setInitialInventoryFilter 
+    }}>
       {children}
     </UIContext.Provider>
   );

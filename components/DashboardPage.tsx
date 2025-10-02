@@ -1,9 +1,8 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { useUIContext } from '../context/UIContext';
 import { useAuthContext } from '../context/AuthContext';
-import { Page, ActivityLog } from '../types';
-import { UsersIcon, BillingIcon, InventoryIcon, RevenueIcon, ChevronRightIcon } from './common/Icons';
+import { Page } from '../types';
+import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon } from './common/Icons';
 
 declare const Chart: any;
 
@@ -204,7 +203,6 @@ const BirthdayReminders: React.FC = () => {
 const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurrentPage}) => {
   const { inventory, customers, bills } = useDataContext();
   const { currentUser } = useAuthContext();
-  const { setInitialInventoryFilter } = useUIContext();
 
   const isStaff = currentUser?.role === 'staff';
 
@@ -219,35 +217,16 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
 
   // Admin stats
   const totalRevenue = bills.reduce((sum, bill) => sum + bill.amountPaid, 0);
-  const totalStock = inventory.reduce((sum, item) => sum + item.quantity, 0);
+  const totalWeight = inventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
 
   // Staff stats
   const staffCustomers = customers.filter(c => c.createdBy === currentUser?.id);
   const staffBills = bills.filter(b => b.createdBy === currentUser?.id);
 
 
-  const handleCategoryClick = (category: string) => {
-    setInitialInventoryFilter(category);
-    setCurrentPage('INVENTORY');
-  };
-
-  const categoryStats = useMemo(() => {
-    const stats: { [key: string]: { count: number; color: string } } = {
-        Gold: { count: 0, color: 'bg-yellow-400' },
-        Silver: { count: 0, color: 'bg-gray-400' },
-        Platinum: { count: 0, color: 'bg-slate-300' },
-    };
-    inventory.forEach(item => {
-        if (item.category in stats) {
-            stats[item.category].count += item.quantity;
-        }
-    });
-    return stats;
-  }, [inventory]);
-
   return (
     <div className="space-y-6">
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-4 md:gap-6`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-2'} gap-4 md:gap-6`}>
         {isStaff ? (
           <>
             <StatCard title="Customers Added By You" value={staffCustomers.length} icon={<UsersIcon />} onClick={() => setCurrentPage('CUSTOMERS')} />
@@ -255,8 +234,7 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
           </>
         ) : (
           <>
-            <StatCard title="Customers" value={customers.length} icon={<UsersIcon />} onClick={() => setCurrentPage('CUSTOMERS')} />
-            <StatCard title="In Stock" value={totalStock} icon={<InventoryIcon />} onClick={() => setCurrentPage('INVENTORY')} />
+            <StatCard title="Total Weight" value={`${totalWeight.toFixed(3)} g`} icon={<WeightIcon />} onClick={() => setCurrentPage('INVENTORY')} />
             <StatCard title="Revenue" value={formatCurrency(totalRevenue)} icon={<RevenueIcon />} onClick={() => setCurrentPage('REPORTS')} />
           </>
         )}
@@ -274,32 +252,6 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
       )}
       
       {!isStaff && <BirthdayReminders />}
-
-      {!isStaff && (
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
-          <h2 className="text-xl font-bold mb-4">Stock by Category</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* FIX: Cast statsData to a specific type because Object.entries infers it as 'unknown' with an index signature. */}
-            {Object.entries(categoryStats).map(([name, statsData]) => {
-              const stats = statsData as { count: number; color: string };
-              return (
-                <div
-                  key={name}
-                  onClick={() => handleCategoryClick(name)}
-                  className="flex items-center p-4 rounded-lg hover:bg-gray-100 cursor-pointer transition border"
-                >
-                  <div className={`w-8 h-8 rounded-full ${stats.color} mr-4 border border-black/10`}></div>
-                  <div className="flex-grow">
-                    <p className="font-semibold text-brand-charcoal">{name}</p>
-                    <p className="text-sm text-gray-500">{stats.count} items in stock</p>
-                  </div>
-                  <ChevronRightIcon />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
