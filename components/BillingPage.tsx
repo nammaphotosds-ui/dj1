@@ -308,12 +308,9 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
 
   const handleAddItem = (item: JewelryItem) => {
-      if (!itemPrice || parseFloat(itemPrice) <= 0) {
-        toast.error('Please enter a valid price for the item before adding.');
-        return;
-      }
-      setSelectedItems(prev => [...prev, { itemId: item.id, name: item.name, weight: item.weight, price: parseFloat(itemPrice), quantity: 1 }]);
-      setItemPrice(''); // Reset price for next item
+    const price = parseFloat(itemPrice) > 0 ? parseFloat(itemPrice) : 0;
+    setSelectedItems(prev => [...prev, { itemId: item.id, name: item.name, weight: item.weight, price: price, quantity: 1 }]);
+    setItemPrice(''); // Reset price for next item
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -558,14 +555,14 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                 />
             </div>
             <div>
-                <label htmlFor="item-price" className="block text-sm font-medium mb-1">Item Price (₹)</label>
+                <label htmlFor="item-price" className="block text-sm font-medium mb-1">Item Price (₹) <span className="text-gray-500 font-normal">(Optional Pre-fill)</span></label>
                 <input 
                     id="item-price" 
                     type="number" 
                     value={itemPrice} 
                     onChange={e => setItemPrice(e.target.value)}
                     className="w-full p-2 border rounded" 
-                    placeholder="Enter price before adding item"
+                    placeholder="Set price before adding item"
                     disabled={!selectedCustomerId}
                     step="0.01"
                 />
