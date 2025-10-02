@@ -272,6 +272,10 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [silverRatePer10g, setSilverRatePer10g] = useState('');
   const [platinumRatePer10g, setPlatinumRatePer10g] = useState('');
   
+  const [showGoldRateInput, setShowGoldRateInput] = useState(false);
+  const [showSilverRateInput, setShowSilverRateInput] = useState(false);
+  const [showPlatinumRateInput, setShowPlatinumRateInput] = useState(false);
+
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);
   }, [selectedCustomerId, customers]);
@@ -312,29 +316,45 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     };
   }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
 
+  const updatePricesForCategory = (category: JewelryCategory, rateStr: string, itemsToUpdate: BillItem[]) => {
+    const rate = parseFloat(rateStr);
+    if (isNaN(rate) || rate < 0) return itemsToUpdate; // Return original items if rate is invalid
+
+    return itemsToUpdate.map(item => {
+        const inventoryItem = inventory.find(i => i.id === item.itemId);
+        if (inventoryItem && inventoryItem.category === category) {
+            const newPrice = rate > 0 ? (item.weight / 10) * rate : 0;
+            return { ...item, price: newPrice };
+        }
+        return item;
+    });
+  };
+
+  useEffect(() => {
+    setSelectedItems(prevItems => updatePricesForCategory(JewelryCategory.GOLD, goldRatePer10g, prevItems));
+  }, [goldRatePer10g, inventory]);
+
+  useEffect(() => {
+    setSelectedItems(prevItems => updatePricesForCategory(JewelryCategory.SILVER, silverRatePer10g, prevItems));
+  }, [silverRatePer10g, inventory]);
+  
+  useEffect(() => {
+    setSelectedItems(prevItems => updatePricesForCategory(JewelryCategory.PLATINUM, platinumRatePer10g, prevItems));
+  }, [platinumRatePer10g, inventory]);
+
   const handleAddItem = (item: JewelryItem) => {
+    if (item.category === JewelryCategory.GOLD) setShowGoldRateInput(true);
+    if (item.category === JewelryCategory.SILVER) setShowSilverRateInput(true);
+    if (item.category === JewelryCategory.PLATINUM) setShowPlatinumRateInput(true);
+
     let price = 0;
-    
-    if (item.category === JewelryCategory.GOLD) {
-        const rate = parseFloat(goldRatePer10g);
-        if (!rate || rate <= 0) {
-            toast.error("Please enter a valid Gold Rate before adding a gold item.");
-            return;
-        }
-        price = (item.weight / 10) * rate;
-    } else if (item.category === JewelryCategory.SILVER) {
-        const rate = parseFloat(silverRatePer10g);
-        if (!rate || rate <= 0) {
-            toast.error("Please enter a valid Silver Rate before adding a silver item.");
-            return;
-        }
-        price = (item.weight / 10) * rate;
-    } else if (item.category === JewelryCategory.PLATINUM) {
-        const rate = parseFloat(platinumRatePer10g);
-        if (!rate || rate <= 0) {
-            toast.error("Please enter a valid Platinum Rate before adding a platinum item.");
-            return;
-        }
+    let rateStr = '';
+    if (item.category === JewelryCategory.GOLD) rateStr = goldRatePer10g;
+    else if (item.category === JewelryCategory.SILVER) rateStr = silverRatePer10g;
+    else if (item.category === JewelryCategory.PLATINUM) rateStr = platinumRatePer10g;
+
+    const rate = parseFloat(rateStr);
+    if (!isNaN(rate) && rate > 0) {
         price = (item.weight / 10) * rate;
     }
 
@@ -472,6 +492,12 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setIsPaid(true);
     setBillType(BillType.ESTIMATE);
     setSubmissionStatus('idle');
+    setGoldRatePer10g('');
+    setSilverRatePer10g('');
+    setPlatinumRatePer10g('');
+    setShowGoldRateInput(false);
+    setShowSilverRateInput(false);
+    setShowPlatinumRateInput(false);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -574,47 +600,45 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     />
                  )}
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label htmlFor="goldRate" className="block text-sm font-medium mb-1">Gold Rate (per 10g)</label>
-                    <input
-                        id="goldRate"
-                        type="number"
-                        value={goldRatePer10g}
-                        onChange={e => setGoldRatePer10g(e.target.value)}
-                        className="w-full p-2 border rounded"
-                        placeholder="e.g. 75000"
-                        disabled={!selectedCustomerId}
-                        step="0.01"
-                    />
+             
+             {(showGoldRateInput || showSilverRateInput || showPlatinumRateInput) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                    {showGoldRateInput && (
+                        <div>
+                            <label htmlFor="goldRate" className="block text-sm font-medium mb-1 text-yellow-600">Gold Rate (per 10g)</label>
+                            <input
+                                id="goldRate" type="number" value={goldRatePer10g}
+                                onChange={e => setGoldRatePer10g(e.target.value)}
+                                className="w-full p-2 border rounded" placeholder="e.g. 75000"
+                                disabled={!selectedCustomerId} step="0.01"
+                            />
+                        </div>
+                    )}
+                    {showSilverRateInput && (
+                        <div>
+                            <label htmlFor="silverRate" className="block text-sm font-medium mb-1 text-gray-600">Silver Rate (per 10g)</label>
+                            <input
+                                id="silverRate" type="number" value={silverRatePer10g}
+                                onChange={e => setSilverRatePer10g(e.target.value)}
+                                className="w-full p-2 border rounded" placeholder="e.g. 900"
+                                disabled={!selectedCustomerId} step="0.01"
+                            />
+                        </div>
+                    )}
+                    {showPlatinumRateInput && (
+                        <div>
+                            <label htmlFor="platinumRate" className="block text-sm font-medium mb-1 text-blue-600">Platinum Rate (per 10g)</label>
+                            <input
+                                id="platinumRate" type="number" value={platinumRatePer10g}
+                                onChange={e => setPlatinumRatePer10g(e.target.value)}
+                                className="w-full p-2 border rounded" placeholder="e.g. 2500"
+                                disabled={!selectedCustomerId} step="0.01"
+                            />
+                        </div>
+                    )}
                 </div>
-                 <div>
-                    <label htmlFor="silverRate" className="block text-sm font-medium mb-1">Silver Rate (per 10g)</label>
-                    <input
-                        id="silverRate"
-                        type="number"
-                        value={silverRatePer10g}
-                        onChange={e => setSilverRatePer10g(e.target.value)}
-                        className="w-full p-2 border rounded"
-                        placeholder="e.g. 900"
-                        disabled={!selectedCustomerId}
-                        step="0.01"
-                    />
-                </div>
-                 <div>
-                    <label htmlFor="platinumRate" className="block text-sm font-medium mb-1">Platinum Rate (per 10g)</label>
-                    <input
-                        id="platinumRate"
-                        type="number"
-                        value={platinumRatePer10g}
-                        onChange={e => setPlatinumRatePer10g(e.target.value)}
-                        className="w-full p-2 border rounded"
-                        placeholder="e.g. 2500"
-                        disabled={!selectedCustomerId}
-                        step="0.01"
-                    />
-                </div>
-            </div>
+            )}
+            
              <div>
                 <label className="block text-sm font-medium mb-1">Add Items</label>
                 <SearchableSelect<JewelryItem>
