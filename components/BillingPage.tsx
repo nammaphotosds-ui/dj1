@@ -267,7 +267,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [lessWeight, setLessWeight] = useState('');
   const [makingChargePercentage, setMakingChargePercentage] = useState('');
   const [wastagePercentage, setWastagePercentage] = useState('');
-  const [isPaid, setIsPaid] = useState(true);
   const [goldRatePer10g, setGoldRatePer10g] = useState('');
   const [silverRatePer10g, setSilverRatePer10g] = useState('');
   const [platinumRatePer10g, setPlatinumRatePer10g] = useState('');
@@ -275,14 +274,20 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [showGoldRateInput, setShowGoldRateInput] = useState(false);
   const [showSilverRateInput, setShowSilverRateInput] = useState(false);
   const [showPlatinumRateInput, setShowPlatinumRateInput] = useState(false);
+  
+  const [lockedCategory, setLockedCategory] = useState<JewelryCategory | null>(null);
 
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);
   }, [selectedCustomerId, customers]);
 
   const availableInventory = useMemo(() => {
-    return inventory.filter(item => item.quantity > 0 && !selectedItems.some(si => si.itemId === item.id));
-  }, [inventory, selectedItems]);
+    let filtered = inventory.filter(item => item.quantity > 0 && !selectedItems.some(si => si.itemId === item.id));
+    if (lockedCategory) {
+        filtered = filtered.filter(item => item.category === lockedCategory);
+    }
+    return filtered;
+  }, [inventory, selectedItems, lockedCategory]);
 
   const calculations = useMemo(() => {
     const totalWeight = selectedItems.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
@@ -343,6 +348,10 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   }, [platinumRatePer10g, inventory]);
 
   const handleAddItem = (item: JewelryItem) => {
+    if (selectedItems.length === 0) {
+        setLockedCategory(item.category as JewelryCategory);
+    }
+
     if (item.category === JewelryCategory.GOLD) setShowGoldRateInput(true);
     if (item.category === JewelryCategory.SILVER) setShowSilverRateInput(true);
     if (item.category === JewelryCategory.PLATINUM) setShowPlatinumRateInput(true);
@@ -369,7 +378,24 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   };
 
   const handleRemoveItem = (itemId: string) => {
-    setSelectedItems(prev => prev.filter(item => item.itemId !== itemId));
+    setSelectedItems(prev => {
+        const newItems = prev.filter(item => item.itemId !== itemId);
+        if (newItems.length === 0) {
+            setLockedCategory(null);
+            setShowGoldRateInput(false);
+            setShowSilverRateInput(false);
+            setShowPlatinumRateInput(false);
+        } else {
+            const remainingCategories = new Set(newItems.map(i => {
+                const inventoryItem = inventory.find(invI => invI.id === i.itemId);
+                return inventoryItem?.category;
+            }));
+            if (!remainingCategories.has(JewelryCategory.GOLD)) setShowGoldRateInput(false);
+            if (!remainingCategories.has(JewelryCategory.SILVER)) setShowSilverRateInput(false);
+            if (!remainingCategories.has(JewelryCategory.PLATINUM)) setShowPlatinumRateInput(false);
+        }
+        return newItems;
+    });
   };
 
   const handleBillTypeChange = (newType: BillType) => {
@@ -412,11 +438,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     }
 
     setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: newQuantity } : item));
-  };
-  
-  const handleItemPriceChange = (itemId: string, newPriceStr: string) => {
-    const newPrice = parseFloat(newPriceStr);
-    setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, price: isNaN(newPrice) ? 0 : newPrice } : item));
   };
   
     const generatePdfBlob = (componentToRender: React.ReactElement): Promise<Blob | null> => {
@@ -489,7 +510,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setLessWeight('');
     setMakingChargePercentage('');
     setWastagePercentage('');
-    setIsPaid(true);
     setBillType(BillType.ESTIMATE);
     setSubmissionStatus('idle');
     setGoldRatePer10g('');
@@ -498,6 +518,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setShowGoldRateInput(false);
     setShowSilverRateInput(false);
     setShowPlatinumRateInput(false);
+    setLockedCategory(null);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -536,7 +557,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
           lessWeight: parseFloat(lessWeight) || 0,
           makingChargePercentage: parseFloat(makingChargePercentage) || 0,
           wastagePercentage: parseFloat(wastagePercentage) || 0,
-          amountPaid: isPaid ? calculations.grandTotal : 0,
+          amountPaid: calculations.grandTotal,
         });
         
         const customer = getCustomerById(selectedCustomerId);
@@ -601,6 +622,12 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                  )}
             </div>
              
+             {lockedCategory && (
+                <div className="p-2 bg-blue-50 text-blue-800 rounded-lg text-sm text-center border border-blue-200">
+                    <p>Adding items from the <strong>{lockedCategory}</strong> category only.</p>
+                </div>
+            )}
+
              {(showGoldRateInput || showSilverRateInput || showPlatinumRateInput) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
                     {showGoldRateInput && (
@@ -667,7 +694,14 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                         <div className="mt-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor={`price-${item.itemId}`} className="text-xs font-medium text-gray-600">Price (₹)</label>
-                                <input id={`price-${item.itemId}`} type="number" value={item.price === 0 ? '' : item.price} onChange={(e) => handleItemPriceChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="Price" step="0.01" required onFocus={e => e.target.select()} />
+                                <input
+                                    id={`price-${item.itemId}`}
+                                    type="text"
+                                    value={item.price > 0 ? item.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                    className="w-full p-1.5 border rounded bg-gray-100"
+                                    placeholder="Auto-calculated"
+                                    readOnly
+                                />
                             </div>
                             <div>
                                 <label htmlFor={`qty-${item.itemId}`} className="text-xs font-medium text-gray-600">Quantity</label>
@@ -724,13 +758,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                              <div className="flex gap-4">
                                 <label className="flex items-center"><input type="radio" name="billType" value={BillType.ESTIMATE} checked={billType === BillType.ESTIMATE} onChange={() => handleBillTypeChange(BillType.ESTIMATE)} className="mr-2"/> Estimate</label>
                                 <label className="flex items-center"><input type="radio" name="billType" value={BillType.INVOICE} checked={billType === BillType.INVOICE} onChange={() => handleBillTypeChange(BillType.INVOICE)} className="mr-2"/> Invoice</label>
-                             </div>
-                        </div>
-                         <div className="flex items-center gap-4">
-                             <label className="block text-sm font-medium">Payment:</label>
-                             <div className="flex gap-4">
-                                <label className="flex items-center"><input type="radio" name="paymentStatus" value="paid" checked={isPaid} onChange={() => setIsPaid(true)} className="mr-2"/> Fully Paid</label>
-                                <label className="flex items-center"><input type="radio" name="paymentStatus" value="unpaid" checked={!isPaid} onChange={() => setIsPaid(false)} className="mr-2"/> Unpaid</label>
                              </div>
                         </div>
                     </div>
