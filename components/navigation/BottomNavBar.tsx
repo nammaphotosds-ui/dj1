@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { Page, CurrentUser } from '../../types';
-import { useUIContext } from '../../context/UIContext';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, AddUserIcon, DistributorIcon } from '../common/Icons';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon } from '../common/Icons';
 
 const NavItem: React.FC<{
     page: Page;
@@ -26,18 +25,18 @@ const NavItem: React.FC<{
 
 const MoreMenu: React.FC<{
     currentUser: CurrentUser;
+    setCurrentPage: (page: Page) => void;
     onLogout: () => void;
     onClose: () => void;
-}> = ({ currentUser, onLogout, onClose }) => {
-    const { openAddStaffModal, openAddDistributorModal } = useUIContext();
+}> = ({ currentUser, setCurrentPage, onLogout, onClose }) => {
     
-    const adminOnlyItems = [
-        { label: 'Add Staff', icon: <AddUserIcon />, action: openAddStaffModal },
-        { label: 'Add Distributor', icon: <DistributorIcon />, action: openAddDistributorModal },
+    const adminNavItems = [
+        { label: 'Manage Staff', icon: <StaffIcon />, page: 'STAFF_MANAGEMENT' as Page },
+        { label: 'Manage Distributors', icon: <DistributorIcon />, page: 'DISTRIBUTOR_MANAGEMENT' as Page },
     ];
     
-    const handleAction = (action: () => void) => {
-        action();
+    const handleNav = (page: Page) => {
+        setCurrentPage(page);
         onClose();
     };
     
@@ -51,11 +50,11 @@ const MoreMenu: React.FC<{
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4 pb-6 shadow-lg" onClick={e => e.stopPropagation()}>
                  <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
                 {currentUser.role === 'admin' && (
-                    <div className="grid grid-cols-3 gap-4 text-center mb-4 pb-4 border-b">
-                        {adminOnlyItems.map(item => (
-                            <button key={item.label} onClick={() => handleAction(item.action)} className="flex flex-col items-center text-gray-700">
-                                <div className="p-3 bg-gray-100 rounded-full">{item.icon}</div>
-                                <span className="text-xs mt-1">{item.label}</span>
+                    <div className="space-y-2 mb-4 pb-4 border-b">
+                        {adminNavItems.map(item => (
+                            <button key={item.label} onClick={() => handleNav(item.page)} className="w-full flex items-center p-3 hover:bg-gray-100 rounded-lg">
+                                {item.icon}
+                                <span className="ml-3 font-semibold">{item.label}</span>
                             </button>
                         ))}
                     </div>
@@ -106,16 +105,15 @@ const BottomNavBar: React.FC<{
                         onClick={() => setIsMoreMenuOpen(true)}
                         className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 text-brand-gray`}
                     >
-                        {isStaff ? (
-                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                        ) : <AddUserIcon />}
-                        <span className="text-xs mt-1">{isStaff ? 'More' : 'Add Profiles'}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        <span className="text-xs mt-1">{isStaff ? 'More' : 'Manage'}</span>
                     </button>
                 </div>
             </div>
             {isMoreMenuOpen && (
                 <MoreMenu
                     currentUser={currentUser}
+                    setCurrentPage={setCurrentPage}
                     onLogout={onLogout}
                     onClose={() => setIsMoreMenuOpen(false)}
                 />

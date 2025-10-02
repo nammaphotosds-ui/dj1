@@ -10,6 +10,8 @@ const PAGE_TITLES: Record<Page, string> = {
     BILLING: 'Create New Bill',
     SETTINGS: 'Application Settings',
     REPORTS: 'Reports & Analytics',
+    STAFF_MANAGEMENT: 'Manage Staff',
+    DISTRIBUTOR_MANAGEMENT: 'Manage Distributors',
 };
 
 const AppHeader: React.FC<{ currentPage: Page; }> = ({ currentPage }) => {

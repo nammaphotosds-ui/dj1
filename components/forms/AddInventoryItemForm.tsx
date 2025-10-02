@@ -11,7 +11,17 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
     const [weight, setWeight] = useState('');
     const [purity, setPurity] = useState('');
     const [quantity, setQuantity] = useState('1');
+    const [imageUrl, setImageUrl] = useState('');
     const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+    const handleSearchImage = () => {
+        if (name) {
+            const query = encodeURIComponent(`${name} jewelry gold silver high quality`);
+            window.open(`https://www.google.com/search?tbm=isch&q=${query}`, '_blank');
+        } else {
+            toast.error('Please enter an item name first to search for an image.');
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,6 +35,7 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                 weight: parseFloat(weight),
                 purity: parseFloat(purity),
                 quantity: parseInt(quantity, 10),
+                imageUrl: imageUrl || undefined,
             });
             setSubmissionStatus('saved');
             toast.success('Item added successfully!');
@@ -41,7 +52,11 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <input type="text" placeholder="Item Name" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded" required/>
+            <div className="flex items-center gap-2">
+                <input type="text" placeholder="Item Name" value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border rounded" required/>
+                <button type="button" onClick={handleSearchImage} className="p-2 border rounded bg-gray-100 hover:bg-gray-200 transition">Search Image</button>
+            </div>
+            <input type="url" placeholder="Image URL (Optional)" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="w-full p-2 border rounded"/>
             <div className="grid grid-cols-2 gap-4">
                 <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2 border rounded">
                     {Object.values(JewelryCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}

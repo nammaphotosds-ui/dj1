@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Page, CurrentUser } from '../types';
 import Logo from './common/Logo';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, LogoutIcon, PendingIcon } from './common/Icons';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, ReportsIcon, SettingsIcon, LogoutIcon, StaffIcon, DistributorIcon } from './common/Icons';
 
 const NavItem: React.FC<{
     page: Page;
@@ -40,6 +40,8 @@ const Sidebar: React.FC<{
             { page: 'CUSTOMERS' as Page, label: 'Customers', icon: <UsersIcon /> },
             { page: 'BILLING' as Page, label: 'Create Bill', icon: <BillingIcon /> },
             { page: 'REPORTS' as Page, label: 'Reports', icon: <ReportsIcon /> },
+            { page: 'STAFF_MANAGEMENT' as Page, label: 'Manage Staff', icon: <StaffIcon /> },
+            { page: 'DISTRIBUTOR_MANAGEMENT' as Page, label: 'Manage Distributors', icon: <DistributorIcon /> },
             { page: 'SETTINGS' as Page, label: 'Settings', icon: <SettingsIcon /> },
         ]
         : [
@@ -70,7 +72,7 @@ const Sidebar: React.FC<{
                 </div>
                 <button
                     onClick={onLogout}
-                    className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-300 rounded-lg hover:bg-brand-charcoal-light hover:text-white"
+                    className="flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg text-gray-300 hover:bg-brand-charcoal-light hover:text-white"
                 >
                     <LogoutIcon />
                     <span className="ml-4">Logout</span>
@@ -80,4 +82,5 @@ const Sidebar: React.FC<{
     );
 };
 
+// FIX: Add default export to resolve import error
 export default Sidebar;

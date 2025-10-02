@@ -21,10 +21,28 @@ const InventoryStatCard: React.FC<{ title: string; value: string | number; icon:
 const ProductCard: React.FC<{ item: JewelryItem; onDelete: (itemId: string, itemName: string) => void; }> = ({ item, onDelete }) => {
     const { distributors } = useDataContext();
     const distributorName = distributors.find(d => d.id === item.distributorId)?.name || 'Unknown';
+    const placeholderSrc = `https://via.placeholder.com/300/D4AF37/FFFFFF?text=${item.name.charAt(0)}`;
+    const [imageSrc, setImageSrc] = useState(item.imageUrl || placeholderSrc);
+
+    const handleImageError = () => {
+        setImageSrc(placeholderSrc);
+    };
+
+    // Reset imageSrc if item imageUrl changes
+    useEffect(() => {
+        setImageSrc(item.imageUrl || placeholderSrc);
+    }, [item.imageUrl, item.name, placeholderSrc]);
+
     return (
         <div className="bg-white rounded-lg shadow-md border overflow-hidden group relative transition-shadow hover:shadow-xl">
             <div className="aspect-square w-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                 <img src={`https://via.placeholder.com/300/D4AF37/FFFFFF?text=${item.name.charAt(0)}`} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+                 <img 
+                    src={imageSrc} 
+                    alt={item.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={handleImageError}
+                    loading="lazy"
+                />
             </div>
             <div className="p-3 text-sm">
                 <h3 className="font-bold text-brand-charcoal truncate" title={item.name}>{item.name}</h3>

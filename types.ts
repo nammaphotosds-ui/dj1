@@ -14,6 +14,7 @@ export interface JewelryItem {
   quantity: number;
   dateAdded: string;
   distributorId: string;
+  imageUrl?: string;
 }
 
 export interface Customer {
@@ -80,7 +81,7 @@ export interface ActivityLog {
 }
 
 
-export type Page = 'DASHBOARD' | 'INVENTORY' | 'CUSTOMERS' | 'BILLING' | 'SETTINGS' | 'REPORTS';
+export type Page = 'DASHBOARD' | 'INVENTORY' | 'CUSTOMERS' | 'BILLING' | 'SETTINGS' | 'REPORTS' | 'STAFF_MANAGEMENT' | 'DISTRIBUTOR_MANAGEMENT';
 
 export interface GoogleTokenResponse {
   access_token: string;
