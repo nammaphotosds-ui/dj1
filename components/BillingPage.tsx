@@ -258,6 +258,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const { inventory, customers, createBill, getCustomerById } = useDataContext();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<BillItem[]>([]);
+  const [itemPrice, setItemPrice] = useState('');
   const [bargainedAmount, setBargainedAmount] = useState<string>('');
   const [billType, setBillType] = useState<BillType>(BillType.ESTIMATE);
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'processing' | 'success'>('idle');
@@ -307,7 +308,12 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
 
   const handleAddItem = (item: JewelryItem) => {
-      setSelectedItems(prev => [...prev, { itemId: item.id, name: item.name, weight: item.weight, price: 0, quantity: 1 }]);
+      if (!itemPrice || parseFloat(itemPrice) <= 0) {
+        toast.error('Please enter a valid price for the item before adding.');
+        return;
+      }
+      setSelectedItems(prev => [...prev, { itemId: item.id, name: item.name, weight: item.weight, price: parseFloat(itemPrice), quantity: 1 }]);
+      setItemPrice(''); // Reset price for next item
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -549,6 +555,19 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                             <span className="text-sm text-gray-600">{item.weight}g</span>
                         </div>
                     )}
+                />
+            </div>
+            <div>
+                <label htmlFor="item-price" className="block text-sm font-medium mb-1">Item Price (₹)</label>
+                <input 
+                    id="item-price" 
+                    type="number" 
+                    value={itemPrice} 
+                    onChange={e => setItemPrice(e.target.value)}
+                    className="w-full p-2 border rounded" 
+                    placeholder="Enter price before adding item"
+                    disabled={!selectedCustomerId}
+                    step="0.01"
                 />
             </div>
             <div className="mt-4 max-h-64 overflow-y-auto pr-2">
