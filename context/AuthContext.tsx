@@ -6,17 +6,18 @@ import { DataContext } from './DataContext';
 
 interface AuthContextType {
   currentUser: CurrentUser | null;
-  setCurrentUser: (user: CurrentUser | null) => void;
+  setCurrentUser: React.Dispatch<React.SetStateAction<CurrentUser | null>>;
   isInitialized: boolean;
   loginAsStaff: (id: string, pass: string) => Promise<boolean>;
   error: string | null;
   tokenResponse: GoogleTokenResponse | null;
+  setTokenResponse: React.Dispatch<React.SetStateAction<GoogleTokenResponse | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [tokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
+  const [tokenResponse, setTokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
   const [currentUser, setCurrentUser] = useLocalStorage<CurrentUser | null>('currentUser', null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, setCurrentUser, isInitialized, loginAsStaff, error, tokenResponse }}>
+    <AuthContext.Provider value={{ currentUser, setCurrentUser, isInitialized, loginAsStaff, error, tokenResponse, setTokenResponse }}>
       {children}
     </AuthContext.Provider>
   );

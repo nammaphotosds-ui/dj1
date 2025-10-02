@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import useLocalStorage from '../../hooks/useLocalStorage';
 import { useAuthContext } from '../../context/AuthContext';
 import type { GoogleTokenResponse } from '../../types';
 import Logo from '../common/Logo';
@@ -27,8 +26,7 @@ export const WelcomeScreen: React.FC = () => (
 
 const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const [gsiClient, setGsiClient] = useState<any>(null);
-    const [, setTokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
-    const { setCurrentUser } = useAuthContext();
+    const { setCurrentUser, setTokenResponse } = useAuthContext();
     const [error, setError] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
 

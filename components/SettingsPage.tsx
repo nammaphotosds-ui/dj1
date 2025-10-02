@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import useLocalStorage from '../hooks/useLocalStorage';
 import type { GoogleTokenResponse } from '../types';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
@@ -124,8 +123,7 @@ const StaffManagement: React.FC = () => {
 
 
 const SettingsPage: React.FC = () => {
-    const [, setTokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
-    const { tokenResponse, setCurrentUser } = useAuthContext();
+    const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
     const { resetTransactions } = useDataContext();
 
 
