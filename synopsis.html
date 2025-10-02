@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEVAGIRIKAR JEWELLERYS - Application Synopsis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none; }
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 1rem auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            font-family: 'Lora', serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="text-center p-4 bg-gray-800 text-white no-print">
+        <p>This is a synopsis of the application's design and architecture.</p>
+        <p class="font-bold">To save as PDF: Press Ctrl+P (or Cmd+P) and select "Save as PDF" as the printer destination.</p>
+    </div>
+
+    <div class="page">
+        <header class="flex items-center justify-between pb-4 border-b-2 border-gray-200">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800">Application Synopsis</h1>
+                <p class="text-lg text-gray-500">DEVAGIRIKAR JEWELLERYS Admin Panel</p>
+            </div>
+            <img src="https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png" alt="Logo" class="w-20 h-20">
+        </header>
+
+        <section class="mt-8">
+            <h2 class="text-2xl font-semibold border-b pb-2 mb-4">Brand & Design System</h2>
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-2">Logo</h3>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <img src="https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png" alt="Logo" class="w-16 h-16 mr-4"/>
+                    <p class="text-gray-700"><strong>URL:</strong> <a href="https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png" class="text-blue-600 hover:underline">https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png</a></p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-2">Color Palette</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="p-3 rounded-lg shadow-sm border">
+                        <div class="w-full h-16 rounded mb-2" style="background-color: #daa520;"></div>
+                        <p class="font-bold">Brand Gold</p><p class="text-sm text-gray-600">#daa520</p>
+                    </div>
+                    <div class="p-3 rounded-lg shadow-sm border">
+                        <div class="w-full h-16 rounded mb-2" style="background-color: #f0e68c;"></div>
+                        <p class="font-bold">Brand Gold Light</p><p class="text-sm text-gray-600">#f0e68c</p>
+                    </div>
+                    <div class="p-3 rounded-lg shadow-sm border">
+                        <div class="w-full h-16 rounded mb-2" style="background-color: #b8860b;"></div>
+                        <p class="font-bold">Brand Gold Dark</p><p class="text-sm text-gray-600">#b8860b</p>
+                    </div>
+                    <div class="p-3 rounded-lg shadow-sm border">
+                        <div class="w-full h-16 rounded mb-2" style="background-color: #1a1a1a;"></div>
+                        <p class="font-bold">Brand Charcoal</p><p class="text-sm text-gray-600">#1a1a1a</p>
+                    </div>
+                     <div class="p-3 rounded-lg shadow-sm border">
+                        <div class="w-full h-16 rounded mb-2" style="background-color: #F7E7CE;"></div>
+                        <p class="font-bold">Brand Champagne</p><p class="text-sm text-gray-600">#F7E7CE</p>
+                    </div>
+                    <div class="p-3 rounded-lg shadow-sm border">
+                        <div class="w-full h-16 rounded mb-2" style="background-color: #fdfbf6;"></div>
+                        <p class="font-bold">Brand Cream</p><p class="text-sm text-gray-600">#fdfbf6</p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xl font-semibold mb-2">Typography</h3>
+                <div class="space-y-4">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="font-bold text-lg font-['Lora',_serif]">Lora (Serif)</p>
+                        <p class="text-gray-600">Used for primary headings and branding elements to convey elegance and tradition.</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="font-bold text-lg font-['Inter',_sans-serif]">Inter (Sans-serif)</p>
+                        <p class="text-gray-600">Used for all UI elements, body copy, and data-heavy components for clarity and readability.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-8">
+            <h2 class="text-2xl font-semibold border-b pb-2 mb-4">Technology & Architecture</h2>
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-2">Technology Stack</h3>
+                <ul class="list-disc list-inside space-y-1 text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    <li><strong>Frontend Framework:</strong> React</li>
+                    <li><strong>Styling:</strong> Tailwind CSS</li>
+                    <li><strong>State Management:</strong> React Context API</li>
+                    <li><strong>PDF Generation:</strong> jsPDF & html2canvas</li>
+                    <li><strong>Excel Export:</strong> SheetJS (XLSX)</li>
+                    <li><strong>Charting:</strong> Chart.js</li>
+                    <li><strong>Authentication:</strong> Google Identity Services (for Admin)</li>
+                    <li><strong>Offline/PWA:</strong> Service Worker API</li>
+                </ul>
+            </div>
+            
+            <div>
+                <h3 class="text-xl font-semibold mb-2">Architectural Overview</h3>
+                 <div class="space-y-3 text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    <p>The application is built on a modern, component-based architecture designed for maintainability and scalability.</p>
+                    <ul class="list-disc list-inside pl-4 space-y-1">
+                        <li><strong>State Management:</strong> Global state is managed through three dedicated React Contexts:
+                            <ul class="list-['-_'] list-inside pl-6">
+                                <li><code>AuthContext</code>: Handles user session, roles, and login logic.</li>
+                                <li><code>DataContext</code>: Manages all application data (inventory, customers, bills) and handles synchronization with Google Drive.</li>
+                                <li><code>UIContext</code>: Controls global UI state like modals and fullscreen mode.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Component Structure:</strong> Components are logically organized by feature (e.g., `billing`, `inventory`) with a strong emphasis on reusability. Common, shared components like `Modal`, `Avatar`, and `Icons` are centralized in `components/common`.</li>
+                        <li><strong>Data Persistence:</strong> All application data is stored in a single JSON file within the admin's private Google Drive AppData folder, ensuring data security and ownership. The app synchronizes with this file on load and saves changes automatically.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <footer class="text-center text-sm text-gray-400 mt-12 pt-4 border-t">
+            Generated on: <span id="date"></span>
+        </footer>
+    </div>
+<script>
+    document.getElementById('date').textContent = new Date().toLocaleString();
+</script>
+</body>
+</html>

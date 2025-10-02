@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- PWA and full-screen support for iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#F7E7CE">
+    <title>DEVAGIRIKAR JEWELLERYS Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- html2canvas to capture DOM elements as images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Google Identity Services Library for Sign-In -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js for dashboard charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-gold': '#daa520',
+              'brand-gold-light': '#f0e68c',
+              'brand-gold-dark': '#b8860b',
+              'brand-charcoal': '#1a1a1a',
+              'brand-charcoal-light': '#2e2e2e',
+              'brand-cream': '#fdfbf6',
+              'brand-gray': '#4a4a4a',
+              'brand-champagne': '#F7E7CE',
+              'brand-pale-gold': '#E8D5B1',
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Lora', 'serif'],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-hot-toast": "https://esm.sh/react-hot-toast@2.4.1"
+  }
+}
+</script>
+<style>
+  /* Ensure the app takes the full screen and apply background */
+  html {
+    /* This matches the tailwind 'bg-gradient-to-br from-brand-champagne to-brand-pale-gold' */
+    background-image: linear-gradient(to bottom right, #F7E7CE, #E8D5B1);
+    background-attachment: fixed; /* Keeps the gradient stable during scroll */
+  }
+  html, body, #root {
+    height: 100vh; /* Fallback for browsers that don't support --vh */
+    height: calc(var(--vh, 1vh) * 100);
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: contain; /* Prevents pull-to-refresh & overscroll bounce */
+  }
+  body {
+    background-color: transparent; /* The background is now on the html element */
+  }
+</style>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script>
+      // Mobile viewport height fix
+      const setVh = () => {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      };
+      window.addEventListener('resize', setVh);
+      window.addEventListener('orientationchange', setVh);
+      setVh();
+      
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

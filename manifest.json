@@ -1,0 +1,23 @@
+{
+  "short_name": "Devagirikar Admin",
+  "name": "DEVAGIRIKAR JEWELLERYS Admin",
+  "description": "A comprehensive inventory, customer, and billing management application for a jewelry shop. Features include inventory tracking, customer relationship management with transaction history, and generation of estimates and invoices in PDF format.",
+  "icons": [
+    {
+      "src": "https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "https://ik.imagekit.io/9y4qtxuo0/devagirikar-logo-transparent-bg.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ],
+  "start_url": ".",
+  "display": "fullscreen",
+  "theme_color": "#F7E7CE",
+  "background_color": "#F7E7CE"
+}

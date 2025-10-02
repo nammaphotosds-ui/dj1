@@ -1,0 +1,9 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.devagirikar.admin",
+    "sha256_cert_fingerprints":
+    ["7A:8D:F7:0A:0F:FC:C8:7D:E9:6C:BB:09:AB:93:AA:C8:29:38:39:56:39:B7:4D:12:B6:A9:2F:14:C1:CF:F9:6F"]
+  }
+}]
