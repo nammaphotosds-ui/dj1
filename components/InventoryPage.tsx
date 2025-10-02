@@ -50,7 +50,7 @@ const InventoryPage: React.FC = () => {
     const { inventory, deleteInventoryItem } = useDataContext();
     const { initialInventoryFilter, setInitialInventoryFilter } = useUIContext();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    const [selectedCategory, setSelectedCategory] = useState<string>(JewelryCategory.GOLD);
 
     useEffect(() => {
         if (initialInventoryFilter) {
@@ -62,12 +62,9 @@ const InventoryPage: React.FC = () => {
         }
     }, [initialInventoryFilter, setInitialInventoryFilter]);
 
-    const categories = ['All', ...Object.values(JewelryCategory)];
+    const categories = [...Object.values(JewelryCategory)];
 
     const filteredInventory = useMemo(() => {
-        if (selectedCategory === 'All') {
-            return inventory;
-        }
         return inventory.filter(item => item.category === selectedCategory);
     }, [inventory, selectedCategory]);
 

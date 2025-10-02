@@ -133,10 +133,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const inventoryData = content.inventory || [];
         const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
 
-        const migratedBills = (content.bills || []).map((bill: Bill) => ({
+        // FIX: Changed `bill: Bill` to `bill: any` to handle legacy data structures where bills may not strictly conform to the Bill type. This resolves the 'unknown' type error.
+        const migratedBills = (content.bills || []).map((bill: any) => ({
             ...bill,
-            // FIX: Explicitly type 'item' as 'any' to handle legacy data structures during migration without compile-time errors.
-            items: bill.items.map((item: any) => {
+            items: (bill.items || []).map((item: any) => {
                 if (item.category) {
                     return item; // Category already exists, no migration needed.
                 }

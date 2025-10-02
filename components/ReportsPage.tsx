@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { Page, Bill, JewelryItem } from '../types';
-import { RevenueIcon, BillingIcon, AvgIcon, DownloadIcon, InventoryIcon, WeightIcon, DistributorIcon } from './common/Icons';
+import { Page, Bill, JewelryItem, BillItem } from '../types';
+import { RevenueIcon, BillingIcon, DownloadIcon, InventoryIcon, WeightIcon, DistributorIcon } from './common/Icons';
 
 declare const XLSX: any; // Declare XLSX from the script tag in index.html
 
@@ -92,7 +92,6 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
     const customerReportStats = useMemo(() => ({
         totalRevenue: filteredAndSortedBills.reduce((sum, bill) => sum + bill.grandTotal, 0),
         billCount: filteredAndSortedBills.length,
-        averageBill: filteredAndSortedBills.length > 0 ? filteredAndSortedBills.reduce((sum, bill) => sum + bill.grandTotal, 0) / filteredAndSortedBills.length : 0,
     }), [filteredAndSortedBills]);
 
     // Memoized data for Distribution reports
@@ -120,18 +119,49 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
         totalWeight: filteredAndSortedInventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0),
         uniqueSKUs: filteredAndSortedInventory.length,
     }), [filteredAndSortedInventory]);
+
+    const formatItemSummary = (items: BillItem[]) => {
+        const summary: Record<string, number> = {};
+        items.forEach(item => {
+            if (!summary[item.category]) {
+                summary[item.category] = 0;
+            }
+            summary[item.category] += item.weight * item.quantity;
+        });
+        
+        if (Object.keys(summary).length === 0) return <span className="text-gray-500">-</span>;
+
+        return Object.entries(summary).map(([category, weight]) => (
+            <span key={category} className="mr-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                {category}: <span className="font-semibold">{weight.toFixed(2)}g</span>
+            </span>
+        ));
+    };
+
+    const formatItemSummaryForExcel = (items: BillItem[]) => {
+        const summary: Record<string, number> = {};
+        items.forEach(item => {
+            if (!summary[item.category]) {
+                summary[item.category] = 0;
+            }
+            summary[item.category] += item.weight * item.quantity;
+        });
+        return Object.entries(summary)
+            .map(([category, weight]) => `${category}: ${weight.toFixed(2)}g`)
+            .join(', ');
+    };
     
     const handleExcelExport = () => {
         let data, sheetName, fileName;
 
         if (reportType === 'customers') {
             data = filteredAndSortedBills.map(bill => ({
+                'Bill ID': bill.id,
+                'Date & Time': new Date(bill.date).toLocaleString(),
                 'Customer': bill.customerName,
-                'Created By': userNameMap.get(bill.createdBy) || bill.createdBy,
-                'Date': new Date(bill.date).toLocaleDateString(),
+                'Item Summary (Category/Grams)': formatItemSummaryForExcel(bill.items),
                 'Amount (INR)': bill.grandTotal,
-                'Type': bill.type,
-                'Bill ID': bill.id
+                'Created By': userNameMap.get(bill.createdBy) || bill.createdBy
             }));
             sheetName = 'Sales Report';
             fileName = 'sales_report.xlsx';
@@ -194,10 +224,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
             
             {reportType === 'customers' ? (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <StatCard title="Total Revenue" value={formatCurrency(customerReportStats.totalRevenue)} icon={<RevenueIcon />} />
                         <StatCard title="Number of Bills" value={customerReportStats.billCount} icon={<BillingIcon />} />
-                        <StatCard title="Average Bill Value" value={formatCurrency(customerReportStats.averageBill)} icon={<AvgIcon />} />
                     </div>
                     <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border">
                         <h2 className="text-xl font-bold mb-4">Customer Transactions</h2>
@@ -206,10 +235,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                 <thead>
                                     <tr className="border-b">
                                         <th className="p-3 cursor-pointer" onClick={() => handleSort('customerName')}>Customer <SortIndicator columnKey="customerName"/></th>
-                                        <th className="p-3 cursor-pointer hidden md:table-cell" onClick={() => handleSort('createdBy')}>Created By <SortIndicator columnKey="createdBy"/></th>
-                                        <th className="p-3 cursor-pointer" onClick={() => handleSort('date')}>Date <SortIndicator columnKey="date"/></th>
+                                        <th className="p-3 cursor-pointer" onClick={() => handleSort('date')}>Date & Time <SortIndicator columnKey="date"/></th>
+                                        <th className="p-3">Item Summary (Category/Grams)</th>
                                         <th className="p-3 text-right cursor-pointer" onClick={() => handleSort('grandTotal')}>Amount <SortIndicator columnKey="grandTotal"/></th>
-                                        <th className="p-3 hidden md:table-cell">Type</th>
                                         <th className="p-3 hidden md:table-cell">Bill ID</th>
                                     </tr>
                                 </thead>
@@ -217,10 +245,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                     {filteredAndSortedBills.map(bill => (
                                         <tr key={bill.id} className="border-b hover:bg-gray-50">
                                             <td className="p-3 font-semibold">{bill.customerName}</td>
-                                            <td className="p-3 hidden md:table-cell">{userNameMap.get(bill.createdBy) || bill.createdBy}</td>
-                                            <td className="p-3 text-sm text-gray-600">{new Date(bill.date).toLocaleDateString()}</td>
+                                            <td className="p-3 text-sm text-gray-600 whitespace-nowrap">{new Date(bill.date).toLocaleString()}</td>
+                                            <td className="p-3">{formatItemSummary(bill.items)}</td>
                                             <td className="p-3 text-right font-medium">{formatCurrency(bill.grandTotal)}</td>
-                                            <td className="p-3 hidden md:table-cell text-xs"><span className={`px-2 py-1 rounded-full ${bill.type === 'INVOICE' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>{bill.type}</span></td>
                                             <td className="p-3 hidden md:table-cell font-mono text-xs">{bill.id}</td>
                                         </tr>
                                     ))}
