@@ -3,12 +3,14 @@ import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
 import SyncDataModal from './settings/SyncDataModal';
+import ImportDataModal from './settings/ImportDataModal';
 
 const SettingsPage: React.FC = () => {
     const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
     const { resetTransactions, adminProfile, updateAdminName } = useDataContext();
     const [adminName, setAdminName] = useState(adminProfile.name);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     useEffect(() => {
         setAdminName(adminProfile.name);
@@ -75,13 +77,23 @@ const SettingsPage: React.FC = () => {
                 </form>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md border">
-                <h2 className="text-xl font-bold mb-2">Device Sync</h2>
-                <p className="text-gray-600 mb-4">Share application data with a new staff device by generating a data string to copy and paste.</p>
-                <button onClick={() => setIsSyncModalOpen(true)} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
-                    Generate Sync Data
-                </button>
-                <SyncDataModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
+            <div className="bg-white p-6 rounded-lg shadow-md border grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 className="text-xl font-bold mb-2">Device Sync (Admin to Staff)</h2>
+                    <p className="text-gray-600 mb-4">Generate a data string to set up or update a staff device.</p>
+                    <button onClick={() => setIsSyncModalOpen(true)} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
+                        Generate Sync Data
+                    </button>
+                    <SyncDataModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
+                </div>
+                 <div>
+                    <h2 className="text-xl font-bold mb-2">Import Staff Data</h2>
+                    <p className="text-gray-600 mb-4">Paste the data string from a staff device to merge their changes.</p>
+                    <button onClick={() => setIsImportModalOpen(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+                        Import Data
+                    </button>
+                    <ImportDataModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
+                </div>
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md border">

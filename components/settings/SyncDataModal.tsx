@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../../context/DataContext';
 import Modal from '../common/Modal';
@@ -8,11 +8,27 @@ const SyncDataModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
     const [syncData, setSyncData] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showData, setShowData] = useState(false);
+
+    // Reset internal state when the modal is closed to ensure it's fresh on reopen.
+    useEffect(() => {
+        if (!isOpen) {
+            // Add a small delay to prevent visual glitch during closing animation
+            const timer = setTimeout(() => {
+                setSyncData(null);
+                setIsLoading(false);
+                setError('');
+                setShowData(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     const generateSyncData = () => {
         setIsLoading(true);
         setError('');
         setSyncData(null);
+        setShowData(false); // Hide previous data when generating new data
         try {
             const payload = getSyncDataPayload();
             if (!payload) throw new Error("Could not generate data payload.");
@@ -30,7 +46,8 @@ const SyncDataModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
     const handleCopy = () => {
         if (syncData) {
             navigator.clipboard.writeText(syncData);
-            toast.success("Data copied to clipboard!");
+            localStorage.setItem('lastSyncDataPayload', syncData);
+            toast.success("Data copied & saved locally!");
         }
     };
 
@@ -38,7 +55,7 @@ const SyncDataModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
         <Modal isOpen={isOpen} onClose={onClose} title="Generate Device Sync Data">
             <div className="text-center">
                 <p className="text-gray-600 mb-4">
-                    Copy this entire block of text and send it to the staff member. They will paste it into their app to sync the data.
+                    Generate an encrypted data string to set up a new staff device. This string contains all necessary application data.
                 </p>
                 <div className="p-4 bg-gray-100 rounded-lg my-4 min-h-[12rem] flex items-center justify-center">
                     {isLoading ? (
@@ -46,16 +63,28 @@ const SyncDataModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
                     ) : error ? (
                         <p className="text-red-500">{error}</p>
                     ) : syncData ? (
-                        <div className="w-full text-left">
-                           <textarea 
-                                readOnly 
-                                value={syncData}
-                                className="w-full p-2 border rounded bg-gray-50 text-xs h-32"
-                                onFocus={(e) => e.target.select()}
-                            />
-                            <button onClick={handleCopy} className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                                Copy Data
-                            </button>
+                        <div className="w-full text-center">
+                            {showData ? (
+                                <div className="w-full text-left">
+                                   <p className="text-sm text-gray-600 mb-2">Copy this entire block of text and send it to the staff member.</p>
+                                   <textarea 
+                                        readOnly 
+                                        value={syncData}
+                                        className="w-full p-2 border rounded bg-gray-50 text-xs h-32"
+                                        onFocus={(e) => e.target.select()}
+                                    />
+                                    <button onClick={handleCopy} className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+                                        Copy Data
+                                    </button>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p className="text-green-700 font-semibold mb-4">Sync data has been generated successfully.</p>
+                                    <button onClick={() => setShowData(true)} className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition">
+                                        View Data
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <button onClick={generateSyncData} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">

@@ -36,6 +36,9 @@ interface DataContextType {
   recordPaymentForBill: (billId: string, amount: number) => Promise<void>;
   recordPayment: (customerId: string, amount: number) => Promise<void>;
   getSyncDataPayload: () => string;
+  getStaffChangesPayload: () => { payload: string; changesCount: number };
+  clearStaffChanges: () => void;
+  mergeStaffData: (payload: string) => Promise<{ customersAdded: number; billsAdded: number }>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -50,6 +53,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [adminProfile, setAdminProfile] = useState<{ name: string }>({ name: 'Admin' });
+
+  const [staffChanges, setStaffChanges] = useLocalStorage<{ customers: Omit<Customer, 'pendingBalance'>[]; bills: Bill[] }>('staffChangesCache', { customers: [], bills: [] });
   
   const [driveFileId, setDriveFileId] = useLocalStorage<string | null>('driveFileId', null);
   const [error, setError] = useState<string | null>(null);
@@ -104,13 +109,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const saveDataToDrive = async () => {
         if (!currentUser || !isAuthInitialized) return;
 
+        // Staff members save their changes to their local cache, not Drive.
+        if (currentUser.role === 'staff') {
+            const dataToCache = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
+            localStorage.setItem('appDataCache', JSON.stringify(dataToCache));
+            return;
+        }
+
         if (!driveFileId || !tokenResponse || !tokenResponse.access_token) {
-            if (currentUser.role === 'staff') setError("Cannot save data. An admin must log in.");
             return;
         }
 
         if (tokenResponse.expires_at && tokenResponse.expires_at < Date.now()) {
-            if (currentUser.role === 'staff') setError("Cannot save. Ask an admin to log in to refresh the connection.");
+            setError("Cannot save. Ask an admin to log in to refresh the connection.");
             return;
         }
 
@@ -188,6 +199,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 loadAndSetData(content);
                 setDriveFileId(fileId);
                 localStorage.setItem('appDataCache', JSON.stringify(content));
+                setStaffChanges({ customers: [], bills: [] }); // Clear local changes on successful admin sync
             } else {
                 const initialState = { inventory: [], customers: [], bills: [], staff: [], distributors: [], activityLogs: [], adminProfile: { name: 'Admin'} };
                 const newFileId = await drive.createFile(tokenResponse.access_token, initialState);
@@ -206,7 +218,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser]);
 
-  const getNextCustomerId = () => `DJ${(rawCustomers.length + 1).toString().padStart(5, '0')}`;
+  const getNextCustomerId = () => {
+      const allCustomers = [...rawCustomers, ...staffChanges.customers];
+      return `DJ${(allCustomers.length + 1).toString().padStart(5, '0')}`;
+  }
   
   const updateAdminName = async (name: string) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
@@ -239,6 +254,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const newCustomer: Omit<Customer, 'pendingBalance'> = {
       ...customer, id: getNextCustomerId(), joinDate: new Date().toISOString(), createdBy: currentUser.id,
     };
+    if (currentUser.role === 'staff') {
+        setStaffChanges(prev => ({ ...prev, customers: [...prev.customers, newCustomer] }));
+    }
     setRawCustomers(prev => [...prev, newCustomer]);
     logActivity(`Added new customer: ${newCustomer.name}`);
   };
@@ -270,7 +288,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const datePrefix = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
     const todayISO = today.toISOString().slice(0, 10);
 
-    const todaysBills = bills.filter(bill => new Date(bill.date).toISOString().slice(0, 10) === todayISO);
+    const allBills = [...bills, ...staffChanges.bills];
+    const todaysBills = allBills.filter(bill => new Date(bill.date).toISOString().slice(0, 10) === todayISO);
 
     const maxSeq = todaysBills.reduce((max, bill) => {
         if (bill.id.startsWith(datePrefix)) {
@@ -301,6 +320,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return Array.from(inventoryMap.values());
         });
+    }
+
+    if (currentUser.role === 'staff') {
+        setStaffChanges(prev => ({ ...prev, bills: [...prev.bills, newBill] }));
     }
     
     setBills(prev => [...prev, newBill]);
@@ -437,10 +460,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw new Error("Only an admin can create a sync session.");
     }
     const dataPayload = { inventory, customers: rawCustomers, bills, staff, distributors, adminProfile };
-    // Compress and encode the data to make it smaller for copy-paste
     const jsonString = JSON.stringify(dataPayload);
     try {
-        // Using btoa for simple base64 encoding, which is sufficient here.
         return btoa(jsonString);
     } catch(e) {
         console.error("Encoding failed", e);
@@ -448,12 +469,71 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // --- New Sync Back Logic ---
+  const getStaffChangesPayload = (): { payload: string; changesCount: number } => {
+    if (currentUser?.role !== 'staff') {
+      throw new Error("Only staff can generate a changes payload.");
+    }
+    const changesCount = staffChanges.customers.length + staffChanges.bills.length;
+    const jsonString = JSON.stringify(staffChanges);
+    try {
+        return { payload: btoa(jsonString), changesCount };
+    } catch(e) {
+        console.error("Encoding failed", e);
+        return { payload: "", changesCount: 0 };
+    }
+  };
+
+  const clearStaffChanges = () => {
+    if (currentUser?.role === 'staff') {
+        setStaffChanges({ customers: [], bills: [] });
+    }
+  };
+
+  const mergeStaffData = async (payload: string): Promise<{ customersAdded: number; billsAdded: number }> => {
+    if (currentUser?.role !== 'admin') throw new Error("Permission denied");
+    
+    const jsonString = atob(payload);
+    const changes = JSON.parse(jsonString);
+    
+    const newCustomers = changes.customers || [];
+    const newBills = changes.bills || [];
+
+    // Merge Customers
+    const uniqueNewCustomers = newCustomers.filter((c: Omit<Customer, 'pendingBalance'>) => !rawCustomers.some(rc => rc.id === c.id || rc.phone === c.phone));
+    setRawCustomers(prev => [...prev, ...uniqueNewCustomers]);
+
+    // Merge Bills
+    const uniqueNewBills = newBills.filter((b: Bill) => !bills.some(rb => rb.id === b.id));
+    setBills(prev => [...prev, ...uniqueNewBills].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    
+    // Update inventory for new invoices
+    setInventory(prevInventory => {
+      const inventoryMap = new Map<string, JewelryItem>(prevInventory.map(i => [i.id, i]));
+      for (const bill of uniqueNewBills) {
+          if (bill.type === BillType.INVOICE) {
+            for (const billItem of bill.items) {
+                const item = inventoryMap.get(billItem.itemId);
+                if (item) {
+                    const updatedItem = { ...item, quantity: Math.max(0, item.quantity - billItem.quantity) };
+                    inventoryMap.set(item.id, updatedItem);
+                }
+            }
+          }
+      }
+      return Array.from(inventoryMap.values());
+    });
+
+    logActivity(`Merged data from staff: ${uniqueNewCustomers.length} customers, ${uniqueNewBills.length} bills.`);
+    return { customersAdded: uniqueNewCustomers.length, billsAdded: uniqueNewBills.length };
+  };
+
   const getCustomerById = (id: string) => customers.find(c => c.id === id);
   const getBillsByCustomerId = (id: string) => bills.filter(b => b.customerId === id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, mergeStaffData }}>
       {children}
     </DataContext.Provider>
   );
