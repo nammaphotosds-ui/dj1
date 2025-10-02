@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
-import { Page } from '../types';
+import { Page, JewelryCategory } from '../types';
 import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon } from './common/Icons';
 
 declare const Chart: any;
@@ -23,6 +23,47 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
       </div>
     );
 };
+
+const CategoryWeights: React.FC = () => {
+    const { inventory } = useDataContext();
+    const weights = useMemo(() => {
+        const result = {
+            [JewelryCategory.GOLD]: 0,
+            [JewelryCategory.SILVER]: 0,
+            [JewelryCategory.PLATINUM]: 0,
+        };
+        inventory.forEach(item => {
+            if (result.hasOwnProperty(item.category)) {
+                result[item.category as JewelryCategory] += item.weight * item.quantity;
+            }
+        });
+        return result;
+    }, [inventory]);
+
+    const categoryStyles = {
+        [JewelryCategory.GOLD]: { color: 'bg-yellow-400', name: 'Gold' },
+        [JewelryCategory.SILVER]: { color: 'bg-gray-400', name: 'Silver' },
+        [JewelryCategory.PLATINUM]: { color: 'bg-blue-300', name: 'Platinum' },
+    };
+
+    return (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100 h-full">
+            <h2 className="text-xl font-bold mb-4 flex items-center"><WeightIcon /> <span className="ml-2">Weight by Category</span></h2>
+            <div className="space-y-4">
+                {Object.entries(weights).map(([category, weight]) => (
+                    <div key={category} className="flex items-center justify-between text-lg">
+                        <div className="flex items-center">
+                            <span className={`w-4 h-4 rounded-full mr-3 shadow-inner ${categoryStyles[category as JewelryCategory].color}`}></span>
+                            <span className="font-semibold">{categoryStyles[category as JewelryCategory].name}</span>
+                        </div>
+                        <span className="font-bold text-brand-charcoal">{weight.toFixed(3)} g</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const SalesChart: React.FC = () => {
     const { bills } = useDataContext();
@@ -154,7 +195,7 @@ const ActivityLogFeed: React.FC = () => {
 }
 
 const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurrentPage}) => {
-  const { inventory, customers, bills } = useDataContext();
+  const { customers, bills } = useDataContext();
   const { currentUser } = useAuthContext();
 
   const isStaff = currentUser?.role === 'staff';
@@ -170,7 +211,6 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
 
   // Admin stats
   const totalRevenue = bills.reduce((sum, bill) => sum + bill.amountPaid, 0);
-  const totalWeight = inventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
 
   // Staff stats
   const staffCustomers = customers.filter(c => c.createdBy === currentUser?.id);
@@ -179,7 +219,7 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
 
   return (
     <div className="space-y-6">
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-2'} gap-4 md:gap-6`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6`}>
         {isStaff ? (
           <>
             <StatCard title="Customers Added By You" value={staffCustomers.length} icon={<UsersIcon />} onClick={() => setCurrentPage('CUSTOMERS')} />
@@ -187,7 +227,7 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
           </>
         ) : (
           <>
-            <StatCard title="Total Weight" value={`${totalWeight.toFixed(3)} g`} icon={<WeightIcon />} onClick={() => setCurrentPage('INVENTORY')} />
+            <CategoryWeights />
             <StatCard title="Revenue" value={formatCurrency(totalRevenue)} icon={<RevenueIcon />} onClick={() => setCurrentPage('REPORTS')} />
           </>
         )}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../../context/DataContext';
 import { JewelryCategory } from '../../types';
+import { GoogleGenAI } from "@google/genai";
 
 const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
     const { addInventoryItem, distributors } = useDataContext();
@@ -11,14 +12,34 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
     const [weight, setWeight] = useState('');
     const [purity, setPurity] = useState('');
     const [quantity, setQuantity] = useState('1');
-    const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+    const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'generating' | 'saving' | 'saved'>('idle');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        setSubmissionStatus('generating');
+        const generatingToast = toast.loading('Generating AI product image...');
 
-        setSubmissionStatus('saving');
         try {
-            const generatedImageUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(name + ' jewelry')}`;
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `A professional studio photograph of a beautiful ${name}, jewelry photography, on a clean neutral background, photorealistic.`;
+            
+            const response = await ai.models.generateImages({
+                model: 'imagen-4.0-generate-001',
+                prompt: prompt,
+                config: {
+                    numberOfImages: 1,
+                    outputMimeType: 'image/jpeg',
+                    aspectRatio: '1:1',
+                },
+            });
+            
+            const base64ImageBytes = response.generatedImages[0].image.imageBytes;
+            const imageUrl = `data:image/jpeg;base64,${base64ImageBytes}`;
+            
+            toast.dismiss(generatingToast);
+            setSubmissionStatus('saving');
+            const savingToast = toast.loading('Saving item...');
             
             await addInventoryItem({
                 name,
@@ -27,20 +48,23 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                 weight: parseFloat(weight),
                 purity: parseFloat(purity),
                 quantity: parseInt(quantity, 10),
-                imageUrl: generatedImageUrl,
+                imageUrl: imageUrl,
             });
+
+            toast.dismiss(savingToast);
             setSubmissionStatus('saved');
             toast.success('Item added successfully!');
             setTimeout(() => {
                 onClose();
             }, 1000);
+
         } catch (error) {
-            console.error("Failed to add inventory item:", error);
-            toast.error("An error occurred while saving the item. Please check your connection and try again.");
+            toast.dismiss(generatingToast);
+            console.error("Failed to generate image or add inventory item:", error);
+            toast.error("An error occurred. Please try again.");
             setSubmissionStatus('idle');
         }
     };
-    
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,12 +89,12 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                 className={`w-full p-3 rounded-lg font-semibold transition ${
                     submissionStatus === 'saved'
                         ? 'bg-green-600 text-white'
-                        : submissionStatus === 'saving'
+                        : submissionStatus === 'saving' || submissionStatus === 'generating'
                         ? 'bg-gray-400 text-white opacity-70'
                         : 'bg-brand-gold text-brand-charcoal hover:bg-brand-gold-dark'
                 }`}
             >
-              {submissionStatus === 'saving' ? 'Saving...' : submissionStatus === 'saved' ? 'Saved!' : 'Add Item'}
+              {submissionStatus === 'generating' ? 'Generating Image...' : submissionStatus === 'saving' ? 'Saving...' : submissionStatus === 'saved' ? 'Saved!' : 'Add Item'}
             </button>
         </form>
     );

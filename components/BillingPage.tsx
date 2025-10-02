@@ -164,8 +164,11 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                 <p className="text-[10px] text-brand-gray ml-4">Thank you for your business!</p>
                             </div>
                             <div className="text-center">
-                                <div className="w-40 border-t border-brand-charcoal pt-1"></div>
-                                <p className="text-[10px]">Authorised Signatory</p>
+                                <img 
+                                    src="https://ik.imagekit.io/9y4qtxuo0/IMG-20251002-WA0002%20(1).png?updatedAt=1759414754055" 
+                                    alt="Seal and Signature" 
+                                    className="w-32 h-auto"
+                                />
                             </div>
                         </div>
                     </section>
@@ -611,45 +614,59 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     <div className="flex justify-between"><span>Wastage ({(parseFloat(wastagePercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.wastageAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                     <div className="flex justify-between"><span>Discount:</span><span className="text-green-600">- ₹{(parseFloat(bargainedAmount) || 0).toLocaleString('en-IN')}</span></div>
                     <div className="flex justify-between font-bold text-lg border-t-2 border-brand-charcoal pt-2 mt-2"><span>Grand Total:</span><span className="text-brand-gold-dark">₹{calculations.grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium">Less Weight (g)</label><input type="number" step="0.001" value={lessWeight} onChange={e => setLessWeight(e.target.value)} className="w-full p-2 border rounded" placeholder="0.000"/></div>
-                    <div><label className="block text-sm font-medium">Discount (₹)</label><input type="number" value={bargainedAmount} onChange={e => setBargainedAmount(e.target.value)} className="w-full p-2 border rounded" placeholder="0.00"/></div>
-                </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium">Making Charge (%)</label><input type="number" value={makingChargePercentage} onChange={e => setMakingChargePercentage(e.target.value)} className="w-full p-2 border rounded" placeholder="0"/></div>
-                    <div><label className="block text-sm font-medium">Wastage (%)</label><input type="number" value={wastagePercentage} onChange={e => setWastagePercentage(e.target.value)} className="w-full p-2 border rounded" placeholder="0"/></div>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Bill Type</label>
-                    <div className="flex gap-4">
-                        <label className="flex items-center"><input type="radio" name="billType" value={BillType.ESTIMATE} checked={billType === BillType.ESTIMATE} onChange={() => handleBillTypeChange(BillType.ESTIMATE)} className="mr-2"/> Estimate</label>
-                        <label className="flex items-center"><input type="radio" name="billType" value={BillType.INVOICE} checked={billType === BillType.INVOICE} onChange={() => handleBillTypeChange(BillType.INVOICE)} className="mr-2"/> Invoice</label>
+                    <div className="space-y-2 mt-4 pt-4 border-t">
+                        <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                <label htmlFor="lessWeight" className="block text-xs font-medium text-gray-600">Less Weight (g)</label>
+                                <input id="lessWeight" type="number" value={lessWeight} onChange={e => setLessWeight(e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.000" step="0.001" />
+                            </div>
+                            <div>
+                                <label htmlFor="bargainedAmount" className="block text-xs font-medium text-gray-600">Discount (₹)</label>
+                                <input id="bargainedAmount" type="number" value={bargainedAmount} onChange={e => setBargainedAmount(e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.00" step="0.01" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="makingChargePercentage" className="block text-xs font-medium text-gray-600">Making Charge (%)</label>
+                                <input id="makingChargePercentage" type="number" value={makingChargePercentage} onChange={e => setMakingChargePercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 10" step="0.01" />
+                            </div>
+                            <div>
+                                <label htmlFor="wastagePercentage" className="block text-xs font-medium text-gray-600">Wastage (%)</label>
+                                <input id="wastagePercentage" type="number" value={wastagePercentage} onChange={e => setWastagePercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 3" step="0.01" />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 pt-2">
+                             <label className="block text-sm font-medium">Bill Type:</label>
+                             <div className="flex gap-4">
+                                <label className="flex items-center"><input type="radio" name="billType" value={BillType.ESTIMATE} checked={billType === BillType.ESTIMATE} onChange={() => handleBillTypeChange(BillType.ESTIMATE)} className="mr-2"/> Estimate</label>
+                                <label className="flex items-center"><input type="radio" name="billType" value={BillType.INVOICE} checked={billType === BillType.INVOICE} onChange={() => handleBillTypeChange(BillType.INVOICE)} className="mr-2"/> Invoice</label>
+                             </div>
+                        </div>
+                         <div className="flex items-center gap-4">
+                             <label className="block text-sm font-medium">Payment:</label>
+                             <div className="flex gap-4">
+                                <label className="flex items-center"><input type="radio" name="paymentStatus" value="paid" checked={isPaid} onChange={() => setIsPaid(true)} className="mr-2"/> Fully Paid</label>
+                                <label className="flex items-center"><input type="radio" name="paymentStatus" value="unpaid" checked={!isPaid} onChange={() => setIsPaid(false)} className="mr-2"/> Unpaid</label>
+                             </div>
+                        </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">An 'Invoice' will deduct items from inventory. An 'Estimate' will not.</p>
                 </div>
-                 <div>
-                    <label className="block text-sm font-medium mb-1">Payment Status</label>
-                    <div className="flex items-center p-3 bg-gray-50 border rounded-lg">
-                        <input 
-                            type="checkbox" 
-                            id="isPaid" 
-                            checked={isPaid} 
-                            onChange={(e) => setIsPaid(e.target.checked)} 
-                            className="h-5 w-5 rounded border-gray-300 text-brand-gold focus:ring-brand-gold-dark"
-                        />
-                        <label htmlFor="isPaid" className="ml-3 block text-sm font-medium text-gray-700">
-                            Mark as Fully Paid
-                        </label>
-                    </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <button type="submit" value="download" disabled={submissionStatus !== 'idle'} className="w-full bg-brand-gold text-brand-charcoal p-3 rounded-lg font-semibold hover:bg-brand-gold-dark transition disabled:bg-gray-400 disabled:opacity-70">
-                        {submissionStatus === 'processing' ? 'Processing...' : submissionStatus === 'success' ? 'Success!' : 'Create & Download PDF'}
+                <div className="mt-6 flex flex-col gap-3">
+                     <button 
+                        type="submit" 
+                        value="download"
+                        disabled={!selectedCustomerId || selectedItems.length === 0 || submissionStatus !== 'idle'}
+                        className="w-full p-3 bg-brand-gold text-brand-charcoal rounded-lg font-semibold hover:bg-brand-gold-dark transition disabled:opacity-70"
+                    >
+                        {submissionStatus === 'processing' ? 'Processing...' : submissionStatus === 'success' ? 'Success!' : 'Save & Download'}
                     </button>
-                    <button type="submit" value="send" disabled={submissionStatus !== 'idle'} className="w-full flex items-center justify-center bg-green-600 text-white p-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400 disabled:opacity-70">
-                        <SendIcon />
-                        {submissionStatus === 'processing' ? 'Processing...' : submissionStatus === 'success' ? 'Success!' : 'Create & Send'}
+                    <button 
+                        type="submit" 
+                        value="send"
+                        disabled={!selectedCustomerId || selectedItems.length === 0 || submissionStatus !== 'idle' || !selectedCustomer?.phone}
+                        className="w-full p-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-70 flex items-center justify-center gap-2"
+                    >
+                       <SendIcon/> {submissionStatus === 'processing' ? 'Processing...' : 'Save & Send to WhatsApp'}
                     </button>
                 </div>
             </div>
@@ -659,4 +676,5 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   );
 };
 
+// FIX: Add default export to resolve import error
 export default BillingPage;

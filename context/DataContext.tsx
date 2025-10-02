@@ -25,6 +25,7 @@ interface DataContextType {
   getNextCustomerId: () => string;
   resetTransactions: () => Promise<void>;
   addStaff: (newStaff: Omit<Staff, 'passwordHash'>, password: string) => Promise<void>;
+  updateStaff: (staffId: string, newDetails: { id: string; name: string; password?: string }) => Promise<void>;
   deleteStaff: (staffId: string) => Promise<void>;
   addDistributor: (distributor: Omit<Distributor, 'id'>) => Promise<void>;
   deleteDistributor: (distributorId: string) => Promise<void>;
@@ -304,6 +305,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logActivity(`Added new staff member: ${staffMember.name} (${staffMember.id})`);
   };
 
+  const updateStaff = async (staffId: string, newDetails: { id: string; name: string; password?: string }) => {
+    if (currentUser?.role !== 'admin') throw new Error("Permission denied");
+
+    if (newDetails.id !== staffId && staff.some(s => s.id === newDetails.id)) {
+        throw new Error(`Staff ID "${newDetails.id}" is already in use.`);
+    }
+
+    let newPasswordHash: string | undefined;
+    if (newDetails.password) {
+        newPasswordHash = await hashPassword(newDetails.password);
+    }
+
+    setStaff(prev => {
+        return prev.map(s => {
+            if (s.id === staffId) {
+                return {
+                    id: newDetails.id,
+                    name: newDetails.name,
+                    passwordHash: newPasswordHash || s.passwordHash,
+                };
+            }
+            return s;
+        });
+    });
+
+    logActivity(`Updated details for staff member: ${newDetails.name} (${newDetails.id})`);
+  };
+
   const deleteStaff = async (staffId: string) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
     const staffToDelete = staff.find(s => s.id === staffId);
@@ -332,7 +361,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, bills, staff, distributors, activityLogs, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, deleteStaff, addDistributor, deleteDistributor, recordPayment }}>
+    <DataContext.Provider value={{ inventory, customers, bills, staff, distributors, activityLogs, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPayment }}>
       {children}
     </DataContext.Provider>
   );
