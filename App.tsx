@@ -19,7 +19,7 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
-import { toast } from 'react-hot-toast';
+import SyncWithCodeScreen from './components/auth/SyncWithCodeScreen';
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
@@ -29,6 +29,7 @@ const AppContent: React.FC = () => {
     isAddDistributorModalOpen, closeAddDistributorModal
   } = useUIContext();
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
+  const [showSyncScreen, setShowSyncScreen] = useState(false);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -55,10 +56,18 @@ const AppContent: React.FC = () => {
       );
   }
 
+  if (showSyncScreen) {
+    return (
+        <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+            <SyncWithCodeScreen onBack={() => setShowSyncScreen(false)} />
+        </div>
+    );
+  }
+
   if (!currentUser) {
       return (
         <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <LoginFlow />
+            <LoginFlow onSync={() => setShowSyncScreen(true)} />
         </div>
       );
   }
@@ -142,51 +151,6 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    useEffect(() => {
-        const handleSyncFromUrl = async () => {
-            if (window.location.hash.startsWith('#sync-drive=')) {
-                const syncId = window.location.hash.substring(12);
-                if (syncId) {
-                    const loadingToast = toast.loading('Syncing data from secure link...');
-                    try {
-                        // Public files on Google Drive can be downloaded via this API endpoint if they are public.
-                        // This requires a pre-configured API key, which is assumed to be available.
-                        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${syncId}?alt=media&key=${process.env.API_KEY}`);
-                        
-                        if (!response.ok) {
-                             const errorData = await response.json().catch(() => null);
-                             const errorMessage = errorData?.error?.message || 'Sync data not found or expired.';
-                             throw new Error(errorMessage);
-                        }
-                        const data = await response.json();
-                        
-                        // Basic validation
-                        if (typeof data !== 'object' || !('inventory' in data) || !('customers' in data)) {
-                            throw new Error('Invalid sync data format.');
-                        }
-
-                        localStorage.setItem('appDataCache', JSON.stringify(data));
-                        toast.dismiss(loadingToast);
-                        toast.success('Sync successful! Application will now reload.');
-                        
-                        // Clean the URL and reload
-                        setTimeout(() => {
-                           window.location.hash = '';
-                           window.location.reload();
-                        }, 1500);
-
-                    } catch (error) {
-                        toast.dismiss(loadingToast);
-                        toast.error(error instanceof Error ? error.message : 'Sync failed. Please try again.');
-                         window.location.hash = '';
-                    }
-                }
-            }
-        };
-
-        handleSyncFromUrl();
-    }, []);
-    
     return <AppContent />;
 }
 export default App;

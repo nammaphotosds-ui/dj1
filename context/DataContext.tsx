@@ -36,7 +36,7 @@ interface DataContextType {
   recordPaymentForBill: (billId: string, amount: number) => Promise<void>;
   // FIX: Add recordPayment to resolve error in RecordPaymentForm.tsx
   recordPayment: (customerId: string, amount: number) => Promise<void>;
-  createSyncSession: () => Promise<string>;
+  getSyncDataPayload: () => object;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -178,18 +178,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAdminProfile(content.adminProfile || { name: 'Admin' });
     };
     
-    const cleanupSyncFiles = async (accessToken: string) => {
-        try {
-            const oldFileIds = await drive.findOldSyncFiles(accessToken);
-            for (const fileId of oldFileIds) {
-                await drive.deleteFile(accessToken, fileId);
-                console.log(`Cleaned up old sync file: ${fileId}`);
-            }
-        } catch (e) {
-            console.warn("Could not clean up old sync files:", e);
-        }
-    };
-    
     const initData = async () => {
         isInitialLoad.current = true;
         setError(null);
@@ -203,9 +191,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (currentUser?.role !== 'admin' || !tokenResponse || !tokenResponse.access_token) {
             return;
         }
-        
-        // Perform cleanup of old sync files on admin load
-        await cleanupSyncFiles(tokenResponse.access_token);
 
         try {
             const fileId = await drive.getFileId(tokenResponse.access_token);
@@ -458,15 +443,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (distToDelete) logActivity(`Deleted distributor: ${distToDelete.name}`);
   };
   
-  const createSyncSession = async (): Promise<string> => {
-    if (currentUser?.role !== 'admin' || !tokenResponse?.access_token) {
-        throw new Error("Only an admin can create a sync session.");
-    }
-    const dataToSync = { inventory, customers: rawCustomers, bills, staff, distributors, adminProfile };
-    const fileName = `SYNC_TEMP_${Date.now()}.json`;
-    const fileId = await drive.createFile(tokenResponse.access_token, dataToSync, fileName);
-    await drive.shareFilePublicly(tokenResponse.access_token, fileId);
-    return fileId;
+  const getSyncDataPayload = () => {
+      return { inventory, customers: rawCustomers, bills, staff, distributors, adminProfile };
   };
 
   const getCustomerById = (id: string) => customers.find(c => c.id === id);
@@ -474,7 +452,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, createSyncSession }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload }}>
       {children}
     </DataContext.Provider>
   );

@@ -123,7 +123,10 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     );
 };
 
-const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => void; }> = ({ onSelectRole }) => {
+const LoginChooserScreen: React.FC<{ 
+    onSelectRole: (role: 'admin' | 'staff') => void;
+    onSync: () => void;
+}> = ({ onSelectRole, onSync }) => {
      return (
         <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
             <div className="flex flex-col items-center text-center mb-16">
@@ -137,7 +140,10 @@ const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => 
             </div>
              <div className="mt-8 text-center">
                  <p className="text-sm text-gray-600">
-                    First time on a new device? Ask an admin to create a Sync Link for you from their Settings page.
+                    First time on a new device?{' '}
+                    <button onClick={onSync} className="text-blue-600 font-semibold hover:underline">
+                        Sync with a Code
+                    </button>
                 </p>
             </div>
         </div>
@@ -145,7 +151,7 @@ const LoginChooserScreen: React.FC<{ onSelectRole: (role: 'admin' | 'staff') => 
 };
 
 
-const LoginFlow: React.FC = () => {
+const LoginFlow: React.FC<{onSync: () => void}> = ({onSync}) => {
     const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
     
     switch(loginType) {
@@ -155,7 +161,7 @@ const LoginFlow: React.FC = () => {
             return <StaffLoginScreen onBack={() => setLoginType('chooser')} />;
         case 'chooser':
         default:
-             return <LoginChooserScreen onSelectRole={setLoginType} />;
+             return <LoginChooserScreen onSelectRole={setLoginType} onSync={onSync} />;
     }
 }
 
