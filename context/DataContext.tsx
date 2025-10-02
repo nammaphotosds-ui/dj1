@@ -227,9 +227,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // FIX: Use memoized customers to find customer details.
     const customer = customers.find(c => c.id === billData.customerId);
     if(!customer) throw new Error("Customer not found");
+    
+    const today = new Date();
+    const datePrefix = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+    const todayISO = today.toISOString().slice(0, 10);
+
+    const todaysBills = bills.filter(bill => new Date(bill.date).toISOString().slice(0, 10) === todayISO);
+
+    const maxSeq = todaysBills.reduce((max, bill) => {
+        if (bill.id.startsWith(datePrefix)) {
+            const seq = parseInt(bill.id.slice(8), 10);
+            if (!isNaN(seq)) {
+               return Math.max(max, seq);
+            }
+        }
+        return max;
+    }, 0);
+
+    const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
+    const newBillId = `${datePrefix}${nextSeq}`;
 
     const newBill: Bill = {
-      ...billData, id: `BILL-${Date.now()}`, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
+      ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
     };
 
     if (billData.type === 'INVOICE') {

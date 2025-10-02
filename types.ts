@@ -30,6 +30,7 @@ export interface Customer {
 
 export interface BillItem {
   itemId: string;
+  serialNo: string;
   name: string;
   weight: number;
   price: number;

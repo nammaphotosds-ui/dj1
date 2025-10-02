@@ -108,7 +108,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     return (
                                         <tr key={item.itemId} className="border-b border-brand-gold-dark/20">
                                             <td className={`font-medium border border-brand-gold-dark/30 ${tableCellClasses}`} style={{ wordBreak: 'break-word' }}>{item.name}</td>
-                                            <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.itemId}</td>
+                                            <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.serialNo}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(3)}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{quantity}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.price.toLocaleString('en-IN')}</td>
@@ -261,7 +261,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const { inventory, customers, createBill, getCustomerById } = useDataContext();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<BillItem[]>([]);
-  const [itemPrice, setItemPrice] = useState('');
   const [bargainedAmount, setBargainedAmount] = useState<string>('');
   const [billType, setBillType] = useState<BillType>(BillType.ESTIMATE);
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'processing' | 'success'>('idle');
@@ -311,9 +310,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
 
   const handleAddItem = (item: JewelryItem) => {
-    const price = parseFloat(itemPrice) > 0 ? parseFloat(itemPrice) : 0;
-    setSelectedItems(prev => [...prev, { itemId: item.id, name: item.name, weight: item.weight, price: price, quantity: 1 }]);
-    setItemPrice(''); // Reset price for next item
+    setSelectedItems(prev => [...prev, { itemId: item.id, serialNo: item.serialNo, name: item.name, weight: item.weight, price: 0, quantity: 1 }]);
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -557,37 +554,24 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     )}
                 />
             </div>
-            <div>
-                <label htmlFor="item-price" className="block text-sm font-medium mb-1">Item Price (₹) <span className="text-gray-500 font-normal">(Optional Pre-fill)</span></label>
-                <input 
-                    id="item-price" 
-                    type="number" 
-                    value={itemPrice} 
-                    onChange={e => setItemPrice(e.target.value)}
-                    className="w-full p-2 border rounded" 
-                    placeholder="Set price before adding item"
-                    disabled={!selectedCustomerId}
-                    step="0.01"
-                />
-            </div>
-            <div className="mt-4 max-h-64 overflow-y-auto pr-2">
+            <div className="mt-4 max-h-72 overflow-y-auto pr-2">
                  {selectedItems.map(item => (
                     <div key={item.itemId} className="bg-gray-50 p-3 rounded mb-2 border">
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="font-semibold">{item.name}</p>
-                                <p className="text-xs text-gray-500">{item.itemId} | {item.weight.toFixed(3)}g</p>
+                                <p className="text-xs text-gray-500">S/N: {item.serialNo} | {item.weight.toFixed(3)}g</p>
                             </div>
                             <button type="button" onClick={() => handleRemoveItem(item.itemId)} className="text-red-500 hover:text-red-700 font-bold text-xl leading-none -mt-1 -mr-1">&times;</button>
                         </div>
                         <div className="mt-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor={`price-${item.itemId}`} className="text-xs font-medium text-gray-600">Price (₹)</label>
-                                <input id={`price-${item.itemId}`} type="number" value={item.price} onChange={(e) => handleItemPriceChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.00" step="0.01" min="0" required />
+                                <input id={`price-${item.itemId}`} type="number" value={item.price} onChange={(e) => handleItemPriceChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.00" step="0.01" min="0" required onFocus={e => e.target.select()} />
                             </div>
                             <div>
                                 <label htmlFor={`qty-${item.itemId}`} className="text-xs font-medium text-gray-600">Quantity</label>
-                                <input id={`qty-${item.itemId}`} type="number" value={item.quantity} onChange={e => handleQuantityChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" min="1" step="1" required />
+                                <input id={`qty-${item.itemId}`} type="number" value={item.quantity} onChange={e => handleQuantityChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" min="1" step="1" required onFocus={e => e.target.select()} />
                             </div>
                         </div>
                     </div>
