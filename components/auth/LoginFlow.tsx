@@ -81,7 +81,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                 {isConnecting ? 'Connecting...' : 'Connect with Google'}
              </button>
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
-             <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to main login</button>
+             <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN entry</button>
         </div>
     );
 };
@@ -116,20 +116,22 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                 </button>
                 {error && <p className="text-red-600 text-sm">{error}</p>}
             </form>
-            <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to main login</button>
+            <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN entry</button>
         </div>
     );
 };
 
 const LoginScreen: React.FC = () => {
     const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
+    
+    const handleBackToChooser = () => setLoginType('chooser');
 
     const renderContent = () => {
         switch(loginType) {
             case 'admin':
-                return <AdminLoginScreen onBack={() => setLoginType('chooser')} />;
+                return <AdminLoginScreen onBack={handleBackToChooser} />;
             case 'staff':
-                return <StaffLoginScreen onBack={() => setLoginType('chooser')} />;
+                return <StaffLoginScreen onBack={handleBackToChooser} />;
             case 'chooser':
             default:
                  return (
@@ -152,7 +154,22 @@ const LoginScreen: React.FC = () => {
 };
 
 
-const LoginFlow: React.FC = () => {
+const LoginFlow: React.FC<{ pinAuthRole: 'admin' | 'staff' | 'chooser' }> = ({ pinAuthRole }) => {
+    
+    const handleBackToPin = () => {
+        sessionStorage.removeItem('dj1_pin_role');
+        window.location.reload();
+    };
+
+    if (pinAuthRole === 'admin') {
+        return <AdminLoginScreen onBack={handleBackToPin} />;
+    }
+    
+    if (pinAuthRole === 'staff') {
+        return <StaffLoginScreen onBack={handleBackToPin} />;
+    }
+
+    // Default to the chooser screen if role is 'chooser' or any other value
     return <LoginScreen />;
 }
 

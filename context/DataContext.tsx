@@ -133,16 +133,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const inventoryData = content.inventory || [];
         const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
 
-        // FIX: Changed `bill: Bill` to `bill: any` to handle legacy data structures where bills may not strictly conform to the Bill type. This resolves the 'unknown' type error.
+        // FIX: Handle legacy bill structures by using a type guard to check for `category`.
+        // This safely migrates old data where items might be `unknown` or lack properties.
         const migratedBills = (content.bills || []).map((bill: any) => ({
             ...bill,
-            items: (bill.items || []).map((item: any) => {
-                if (item.category) {
+            items: (bill.items || []).map((item: unknown) => {
+                if (item && typeof item === 'object' && 'category' in item) {
                     return item; // Category already exists, no migration needed.
                 }
-                const inventoryItem = inventoryMap.get(item.itemId);
+                const legacyItem = item as any;
+                const inventoryItem = inventoryMap.get(legacyItem?.itemId);
                 return {
-                    ...item,
+                    ...legacyItem,
                     category: inventoryItem ? inventoryItem.category : 'N/A' // Add category, with a fallback.
                 };
             })
@@ -194,7 +196,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (isAuthInitialized) {
         initData();
     }
-  }, [isAuthInitialized, tokenResponse, currentUser?.role]);
+  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser]);
 
   const getNextCustomerId = () => `DJ${(rawCustomers.length + 1).toString().padStart(5, '0')}`;
   

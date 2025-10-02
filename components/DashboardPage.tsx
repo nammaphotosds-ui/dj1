@@ -27,14 +27,16 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 const CategoryWeights: React.FC = () => {
     const { inventory } = useDataContext();
     const weights = useMemo(() => {
-        const result = {
+        // FIX: Explicitly type `result` as Record<string, number> to ensure TypeScript
+        // correctly infers `weight` as a number after using Object.entries.
+        const result: Record<string, number> = {
             [JewelryCategory.GOLD]: 0,
             [JewelryCategory.SILVER]: 0,
             [JewelryCategory.PLATINUM]: 0,
         };
         inventory.forEach(item => {
             if (result.hasOwnProperty(item.category)) {
-                result[item.category as JewelryCategory] += item.weight * item.quantity;
+                result[item.category] += item.weight * item.quantity;
             }
         });
         return result;

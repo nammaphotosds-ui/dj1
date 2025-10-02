@@ -19,8 +19,11 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
+import PinEntryScreen from './components/auth/PinEntryScreen';
 
-const AppContent: React.FC = () => {
+type PinAuthRole = 'admin' | 'staff' | 'chooser' | null;
+
+const AppContent: React.FC<{pinAuthRole: Exclude<PinAuthRole, null>}> = ({ pinAuthRole }) => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
   const { 
     isAddCustomerModalOpen, closeAddCustomerModal,
@@ -31,16 +34,22 @@ const AppContent: React.FC = () => {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    // Also clear PIN session on logout
+    sessionStorage.removeItem('dj1_pin_role');
     window.location.reload();
   };
 
   if (!isInitialized) {
-      return <WelcomeScreen />;
+      return (
+        <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+          <WelcomeScreen />
+        </div>
+      );
   }
 
   if (error) {
       return (
-           <div className="flex h-full w-full items-center justify-center p-4">
+           <div className="h-full w-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg flex items-center justify-center p-4">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
                 <h1 className="text-2xl font-bold text-red-700 mb-4">An Error Occurred</h1>
                 <p className="text-red-600 mb-6">{error}</p>
@@ -51,7 +60,11 @@ const AppContent: React.FC = () => {
   }
 
   if (!currentUser) {
-      return <LoginFlow />;
+      return (
+        <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+            <LoginFlow pinAuthRole={pinAuthRole} />
+        </div>
+      );
   }
 
   const renderPage = () => {
@@ -85,7 +98,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="h-full font-sans text-brand-charcoal bg-brand-cream">
+    <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
       <Toaster position="top-center" reverseOrder={false} />
       
       <Sidebar 
@@ -133,6 +146,30 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    return <AppContent />;
+    const [pinAuthRole, setPinAuthRole] = useState<PinAuthRole>(() => {
+        return sessionStorage.getItem('dj1_pin_role') as PinAuthRole;
+    });
+
+    const handlePinSuccess = (role: 'admin' | 'staff') => {
+        sessionStorage.setItem('dj1_pin_role', role);
+        setPinAuthRole(role);
+    };
+    
+    const handleProceedToLogin = () => {
+        // This function allows bypassing the PIN to get to the login screen chooser.
+        sessionStorage.setItem('dj1_pin_role', 'chooser');
+        setPinAuthRole('chooser');
+    }
+
+
+    if (!pinAuthRole) {
+        return (
+             <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+                 <PinEntryScreen onPinSuccess={handlePinSuccess} onProceedToLogin={handleProceedToLogin} />
+             </div>
+        );
+    }
+    
+    return <AppContent pinAuthRole={pinAuthRole} />;
 }
 export default App;
