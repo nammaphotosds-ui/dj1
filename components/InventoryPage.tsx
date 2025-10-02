@@ -73,14 +73,14 @@ const InventoryPage: React.FC = () => {
     }, [inventory, selectedCategory]);
 
     const inventoryStats = useMemo(() => {
-        const totalStock = inventory.reduce((sum, item) => sum + item.quantity, 0);
-        const totalWeight = inventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
+        const totalStock = filteredInventory.reduce((sum, item) => sum + item.quantity, 0);
+        const totalWeight = filteredInventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
         return {
-            uniqueItemCount: inventory.filter(item => item.quantity > 0).length,
+            uniqueItemCount: filteredInventory.filter(item => item.quantity > 0).length,
             totalStock,
             totalWeight
         };
-    }, [inventory]);
+    }, [filteredInventory]);
     
     const handleDelete = (itemId: string, itemName: string) => {
         if (window.confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
