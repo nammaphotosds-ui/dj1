@@ -6,6 +6,7 @@ import { useUIContext } from '../context/UIContext';
 import { useAuthContext } from '../context/AuthContext';
 import type { Customer, Bill } from '../types';
 import Avatar from './common/Avatar';
+import Modal from './common/Modal';
 import { AddUserIcon, SendIcon } from './common/Icons';
 
 // --- Helper Functions & Components (Copied from BillingPage for PDF Generation) ---
@@ -174,7 +175,6 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
     );
 };
 
-// FIX: Define CustomerProfileTemplate component for PDF generation.
 const CustomerProfileTemplate: React.FC<{ customer: Customer; bills: Bill[] }> = ({ customer, bills }) => {
     const totalSpent = bills.reduce((sum, bill) => sum + bill.grandTotal, 0);
     const lastTransactionDate = bills.length > 0 ? new Date(bills[0].date).toLocaleDateString() : 'N/A';
@@ -261,6 +261,72 @@ const CustomerProfileTemplate: React.FC<{ customer: Customer; bills: Bill[] }> =
 };
 
 // --- Page Components ---
+
+const BillPaymentForm: React.FC<{
+    bill: Bill;
+    onClose: () => void;
+    recordPaymentForBill: (billId: string, amount: number) => Promise<void>;
+}> = ({ bill, onClose, recordPaymentForBill }) => {
+    const dueAmount = bill.grandTotal - bill.amountPaid;
+    const [amount, setAmount] = useState(dueAmount.toFixed(2));
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const paymentAmount = parseFloat(amount);
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+            toast.error("Please enter a valid positive amount.");
+            return;
+        }
+        if (paymentAmount > dueAmount + 0.01) {
+             toast.error(`Payment cannot exceed the due amount of ₹${dueAmount.toFixed(2)}.`);
+            return;
+        }
+        
+        setIsSaving(true);
+        try {
+            await recordPaymentForBill(bill.id, paymentAmount);
+            toast.success("Payment recorded successfully!");
+            onClose();
+        } catch (error) {
+            toast.error("Failed to record payment.");
+            console.error(error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <p><strong>Customer:</strong> {bill.customerName}</p>
+                <p><strong>Total Bill:</strong> ₹{bill.grandTotal.toLocaleString('en-IN')}</p>
+                <p><strong>Amount Paid:</strong> ₹{bill.amountPaid.toLocaleString('en-IN')}</p>
+                <p className="font-bold text-red-600"><strong>Amount Due:</strong> ₹{dueAmount.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+                <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700">Payment Amount (₹)</label>
+                <input
+                    type="number"
+                    id="paymentAmount"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-lg"
+                    step="0.01"
+                    max={dueAmount.toFixed(2)}
+                    required
+                    autoFocus
+                />
+            </div>
+            <div className="flex justify-end gap-3">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Cancel</button>
+                <button type="submit" disabled={isSaving} className="px-6 py-2 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 disabled:bg-gray-400">
+                    {isSaving ? 'Saving...' : 'Submit Payment'}
+                </button>
+            </div>
+        </form>
+    );
+};
 
 const BirthdayReminders: React.FC = () => {
     const { customers } = useDataContext();
@@ -399,10 +465,11 @@ const FestivalGreetings: React.FC = () => {
 
 
 const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> = ({ customer, onBack }) => {
-    const { getBillsByCustomerId, deleteCustomer, userNameMap } = useDataContext();
+    const { getBillsByCustomerId, deleteCustomer, userNameMap, recordPaymentForBill } = useDataContext();
     const bills = getBillsByCustomerId(customer.id);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [generatingPdfForBillId, setGeneratingPdfForBillId] = useState<string | null>(null);
+    const [billToPay, setBillToPay] = useState<Bill | null>(null);
 
     const generatePdf = async (componentToRender: React.ReactElement, fileName: string) => {
         // @ts-ignore
@@ -486,24 +553,47 @@ const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> =
                     <div className="max-h-96 overflow-y-auto">
                         {bills.length > 0 ? (
                             <div className="space-y-2">
-                            {bills.map(bill => (
-                                <button 
-                                    key={bill.id} 
-                                    onClick={() => handleDownloadBill(bill)}
-                                    disabled={!!generatingPdfForBillId}
-                                    className="w-full text-left border-b p-3 flex justify-between items-center hover:bg-gray-50 rounded-md transition disabled:opacity-70"
-                                >
-                                    <div className="flex-1">
-                                        <p className="font-semibold">{bill.type} - {new Date(bill.date).toLocaleDateString()}</p>
-                                        <p className="text-xs text-gray-500 font-mono">{bill.id}</p>
-                                        <p className="text-xs text-gray-500">By: {userNameMap.get(bill.createdBy) || bill.createdBy}</p>
+                            {bills.map(bill => {
+                                const dueAmount = bill.grandTotal - bill.amountPaid;
+                                const isUnpaid = dueAmount > 0.01;
+
+                                return (
+                                    <div key={bill.id} className="border-b p-3 flex flex-col sm:flex-row justify-between sm:items-center hover:bg-gray-50 rounded-md transition">
+                                        <div className="flex-1 mb-2 sm:mb-0">
+                                            <p className="font-semibold">{bill.type} - {new Date(bill.date).toLocaleDateString()}</p>
+                                            <p className="text-xs text-gray-500 font-mono">{bill.id}</p>
+                                            <p className="text-xs text-gray-500">By: {userNameMap.get(bill.createdBy) || bill.createdBy}</p>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end gap-2">
+                                            <p className="font-bold">₹{bill.grandTotal.toLocaleString('en-IN')}</p>
+                                            {isUnpaid ? (
+                                                <>
+                                                    <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">
+                                                        Due: ₹{dueAmount.toLocaleString('en-IN')}
+                                                    </span>
+                                                    <button 
+                                                        onClick={() => setBillToPay(bill)}
+                                                        className="text-xs bg-green-600 text-white px-3 py-1 rounded-md font-semibold hover:bg-green-700 transition"
+                                                    >
+                                                        Record Payment
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                                                    ✓ Fully Paid
+                                                </span>
+                                            )}
+                                            <button 
+                                                onClick={() => handleDownloadBill(bill)}
+                                                disabled={!!generatingPdfForBillId}
+                                                className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-md font-semibold hover:bg-blue-200 transition disabled:opacity-70 mt-1"
+                                            >
+                                                {generatingPdfForBillId === bill.id ? 'Downloading...' : 'Download PDF'}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold">₹{bill.grandTotal.toLocaleString('en-IN')}</p>
-                                        {generatingPdfForBillId === bill.id && <p className="text-xs text-blue-500">Downloading...</p>}
-                                    </div>
-                                </button>
-                            ))}
+                                );
+                            })}
                             </div>
                         ) : (
                             <p className="text-gray-500 text-center py-8">No transactions found.</p>
@@ -511,6 +601,16 @@ const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> =
                     </div>
                 </div>
             </div>
+
+            <Modal isOpen={!!billToPay} onClose={() => setBillToPay(null)} title={`Record Payment for Bill ${billToPay?.id}`}>
+                {billToPay && (
+                    <BillPaymentForm 
+                        bill={billToPay} 
+                        onClose={() => setBillToPay(null)}
+                        recordPaymentForBill={recordPaymentForBill}
+                    />
+                )}
+            </Modal>
         </div>
     );
 };

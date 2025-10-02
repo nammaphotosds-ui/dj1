@@ -269,6 +269,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [wastagePercentage, setWastagePercentage] = useState('');
   const [isPaid, setIsPaid] = useState(true);
   const [goldRatePer10g, setGoldRatePer10g] = useState('');
+  const [silverRatePer10g, setSilverRatePer10g] = useState('');
+  const [platinumRatePer10g, setPlatinumRatePer10g] = useState('');
   
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);
@@ -312,14 +314,28 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
 
   const handleAddItem = (item: JewelryItem) => {
     let price = 0;
-    const rate = parseFloat(goldRatePer10g);
-
+    
     if (item.category === JewelryCategory.GOLD) {
-      if (!rate || rate <= 0) {
-        toast.error("Please enter a valid Gold Rate before adding a gold item.");
-        return;
-      }
-      price = (item.weight / 10) * rate;
+        const rate = parseFloat(goldRatePer10g);
+        if (!rate || rate <= 0) {
+            toast.error("Please enter a valid Gold Rate before adding a gold item.");
+            return;
+        }
+        price = (item.weight / 10) * rate;
+    } else if (item.category === JewelryCategory.SILVER) {
+        const rate = parseFloat(silverRatePer10g);
+        if (!rate || rate <= 0) {
+            toast.error("Please enter a valid Silver Rate before adding a silver item.");
+            return;
+        }
+        price = (item.weight / 10) * rate;
+    } else if (item.category === JewelryCategory.PLATINUM) {
+        const rate = parseFloat(platinumRatePer10g);
+        if (!rate || rate <= 0) {
+            toast.error("Please enter a valid Platinum Rate before adding a platinum item.");
+            return;
+        }
+        price = (item.weight / 10) * rate;
     }
 
     setSelectedItems(prev => [...prev, { 
@@ -558,9 +574,9 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     />
                  )}
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label htmlFor="goldRate" className="block text-sm font-medium mb-1">Today's Gold Rate (per 10g)</label>
+                    <label htmlFor="goldRate" className="block text-sm font-medium mb-1">Gold Rate (per 10g)</label>
                     <input
                         id="goldRate"
                         type="number"
@@ -572,21 +588,47 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                         step="0.01"
                     />
                 </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Add Items</label>
-                    <SearchableSelect<JewelryItem>
-                        options={availableInventory}
-                        placeholder="Search by name or serial no..."
-                        onSelect={handleAddItem}
+                 <div>
+                    <label htmlFor="silverRate" className="block text-sm font-medium mb-1">Silver Rate (per 10g)</label>
+                    <input
+                        id="silverRate"
+                        type="number"
+                        value={silverRatePer10g}
+                        onChange={e => setSilverRatePer10g(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        placeholder="e.g. 900"
                         disabled={!selectedCustomerId}
-                        renderOption={(item) => (
-                            <div className="flex justify-between">
-                                <span>{item.name} ({item.serialNo})</span>
-                                <span className="text-sm text-gray-600">{item.weight}g</span>
-                            </div>
-                        )}
+                        step="0.01"
                     />
                 </div>
+                 <div>
+                    <label htmlFor="platinumRate" className="block text-sm font-medium mb-1">Platinum Rate (per 10g)</label>
+                    <input
+                        id="platinumRate"
+                        type="number"
+                        value={platinumRatePer10g}
+                        onChange={e => setPlatinumRatePer10g(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        placeholder="e.g. 2500"
+                        disabled={!selectedCustomerId}
+                        step="0.01"
+                    />
+                </div>
+            </div>
+             <div>
+                <label className="block text-sm font-medium mb-1">Add Items</label>
+                <SearchableSelect<JewelryItem>
+                    options={availableInventory}
+                    placeholder="Search by name or serial no..."
+                    onSelect={handleAddItem}
+                    disabled={!selectedCustomerId}
+                    renderOption={(item) => (
+                        <div className="flex justify-between">
+                            <span>{item.name} ({item.serialNo})</span>
+                            <span className="text-sm text-gray-600">{item.weight}g</span>
+                        </div>
+                    )}
+                />
             </div>
             <div className="mt-4 max-h-72 overflow-y-auto pr-2">
                  {selectedItems.map(item => (
