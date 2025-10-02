@@ -5,7 +5,7 @@ import Modal from '../common/Modal';
 import { SendIcon } from '../common/Icons';
 
 const SyncLinkModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const dataContext = useDataContext();
+    const { createSyncSession } = useDataContext();
     const [syncLink, setSyncLink] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -25,28 +25,9 @@ const SyncLinkModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
         setSyncLink(null);
 
         try {
-            const { inventory, customers, bills, staff, distributors, adminProfile } = dataContext;
-            const dataToSync = { inventory, customers, bills, staff, distributors, adminProfile };
-            
-            const response = await fetch('https://jsonblob.com/api/jsonBlob', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dataToSync),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to create a sync session in the cloud.');
-            }
-
-            const blobUrl = response.headers.get('Location');
-            if (!blobUrl) {
-                throw new Error('Could not retrieve the sync session URL.');
-            }
-
-            const syncId = blobUrl.split('/').pop();
+            const syncId = await createSyncSession();
             const appUrl = window.location.origin + window.location.pathname;
-            setSyncLink(`${appUrl}#sync=${syncId}`);
-
+            setSyncLink(`${appUrl}#sync-drive=${syncId}`);
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
             setError(errorMessage);
@@ -80,7 +61,7 @@ const SyncLinkModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
                 </p>
                 <div className="p-4 bg-gray-100 rounded-lg my-4 min-h-[8rem] flex items-center justify-center">
                     {isLoading ? (
-                        <p className="text-gray-500">Generating secure link...</p>
+                        <p className="text-gray-500">Generating secure link from your Google Drive...</p>
                     ) : error ? (
                         <p className="text-red-500">{error}</p>
                     ) : syncLink ? (

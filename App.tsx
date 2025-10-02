@@ -144,14 +144,19 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
     useEffect(() => {
         const handleSyncFromUrl = async () => {
-            if (window.location.hash.startsWith('#sync=')) {
-                const syncId = window.location.hash.substring(6);
+            if (window.location.hash.startsWith('#sync-drive=')) {
+                const syncId = window.location.hash.substring(12);
                 if (syncId) {
-                    const loadingToast = toast.loading('Syncing data...');
+                    const loadingToast = toast.loading('Syncing data from secure link...');
                     try {
-                        const response = await fetch(`https://jsonblob.com/api/jsonBlob/${syncId}`);
+                        // Public files on Google Drive can be downloaded via this API endpoint if they are public.
+                        // This requires a pre-configured API key, which is assumed to be available.
+                        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${syncId}?alt=media&key=${process.env.API_KEY}`);
+                        
                         if (!response.ok) {
-                            throw new Error('Sync data not found or expired.');
+                             const errorData = await response.json().catch(() => null);
+                             const errorMessage = errorData?.error?.message || 'Sync data not found or expired.';
+                             throw new Error(errorMessage);
                         }
                         const data = await response.json();
                         

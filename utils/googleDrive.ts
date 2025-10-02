@@ -34,9 +34,9 @@ export const getFileContent = async (accessToken: string, fileId: string): Promi
 };
 
 // Create a new data file.
-export const createFile = async (accessToken: string, content: object): Promise<string> => {
+export const createFile = async (accessToken: string, content: object, fileName: string = FILE_NAME): Promise<string> => {
     const metadata = {
-        name: FILE_NAME,
+        name: fileName,
         parents: [FOLDER]
     };
 
@@ -61,6 +61,7 @@ export const createFile = async (accessToken: string, content: object): Promise<
     return data.id;
 };
 
+
 // Update an existing data file.
 export const updateFile = async (accessToken: string, fileId: string, content: object): Promise<void> => {
     const response = await fetch(`${DRIVE_UPLOAD_URL}/${fileId}?uploadType=media`, {
@@ -77,4 +78,43 @@ export const updateFile = async (accessToken: string, fileId: string, content: o
         console.error('Update file error:', error);
         throw new Error('Failed to update file in Google Drive.');
     }
+};
+
+// Share a file publicly for reading
+export const shareFilePublicly = async (accessToken: string, fileId: string): Promise<void> => {
+    await fetch(`${DRIVE_API_URL}/${fileId}/permissions`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            role: 'reader',
+            type: 'anyone',
+        }),
+    });
+};
+
+// Delete a file
+export const deleteFile = async (accessToken: string, fileId: string): Promise<void> => {
+    await fetch(`${DRIVE_API_URL}/${fileId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+};
+
+// Find and return IDs of old sync files
+export const findOldSyncFiles = async (accessToken: string): Promise<string[]> => {
+    const response = await fetch(`${DRIVE_API_URL}?spaces=${FOLDER}&q=name contains 'SYNC_TEMP_' and trashed = false&fields=files(id,createdTime)`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!response.ok) return [];
+
+    const { files } = await response.json();
+    if (!files || files.length === 0) return [];
+
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    return files
+        .filter((file: any) => new Date(file.createdTime).getTime() < oneHourAgo)
+        .map((file: any) => file.id);
 };
