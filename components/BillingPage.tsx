@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
-import { BillType, Page } from '../types';
+import { BillType, Page, JewelryCategory } from '../types';
 import type { JewelryItem, BillItem, Customer, Bill } from '../types';
 import { SendIcon } from './common/Icons';
 
@@ -268,6 +268,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [makingChargePercentage, setMakingChargePercentage] = useState('');
   const [wastagePercentage, setWastagePercentage] = useState('');
   const [isPaid, setIsPaid] = useState(true);
+  const [goldRatePer10g, setGoldRatePer10g] = useState('');
   
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);
@@ -310,7 +311,25 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
 
   const handleAddItem = (item: JewelryItem) => {
-    setSelectedItems(prev => [...prev, { itemId: item.id, serialNo: item.serialNo, name: item.name, weight: item.weight, price: 0, quantity: 1 }]);
+    let price = 0;
+    const rate = parseFloat(goldRatePer10g);
+
+    if (item.category === JewelryCategory.GOLD) {
+      if (!rate || rate <= 0) {
+        toast.error("Please enter a valid Gold Rate before adding a gold item.");
+        return;
+      }
+      price = (item.weight / 10) * rate;
+    }
+
+    setSelectedItems(prev => [...prev, { 
+      itemId: item.id, 
+      serialNo: item.serialNo, 
+      name: item.name, 
+      weight: item.weight, 
+      price: price,
+      quantity: 0
+    }]);
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -345,8 +364,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
 
     if (!inventoryItem) return;
 
-    if (isNaN(newQuantity) || newQuantity < 1) {
-        setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: 1 } : item));
+    if (isNaN(newQuantity) || newQuantity < 0) {
+        setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: 0 } : item));
         return;
     }
     
@@ -446,8 +465,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         return;
     }
 
-    if (selectedItems.some(item => item.price <= 0)) {
-        toast.error("Please ensure all items have a price greater than zero.");
+    if (selectedItems.some(item => item.price <= 0 || item.quantity <= 0)) {
+        toast.error("Please ensure all items have a price and quantity greater than zero.");
         return;
     }
 
@@ -539,20 +558,35 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     />
                  )}
             </div>
-             <div>
-                <label className="block text-sm font-medium mb-1">Add Items</label>
-                <SearchableSelect<JewelryItem>
-                    options={availableInventory}
-                    placeholder="Search by name or serial no..."
-                    onSelect={handleAddItem}
-                    disabled={!selectedCustomerId}
-                    renderOption={(item) => (
-                        <div className="flex justify-between">
-                            <span>{item.name} ({item.serialNo})</span>
-                            <span className="text-sm text-gray-600">{item.weight}g</span>
-                        </div>
-                    )}
-                />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="goldRate" className="block text-sm font-medium mb-1">Today's Gold Rate (per 10g)</label>
+                    <input
+                        id="goldRate"
+                        type="number"
+                        value={goldRatePer10g}
+                        onChange={e => setGoldRatePer10g(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        placeholder="e.g. 75000"
+                        disabled={!selectedCustomerId}
+                        step="0.01"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">Add Items</label>
+                    <SearchableSelect<JewelryItem>
+                        options={availableInventory}
+                        placeholder="Search by name or serial no..."
+                        onSelect={handleAddItem}
+                        disabled={!selectedCustomerId}
+                        renderOption={(item) => (
+                            <div className="flex justify-between">
+                                <span>{item.name} ({item.serialNo})</span>
+                                <span className="text-sm text-gray-600">{item.weight}g</span>
+                            </div>
+                        )}
+                    />
+                </div>
             </div>
             <div className="mt-4 max-h-72 overflow-y-auto pr-2">
                  {selectedItems.map(item => (
@@ -567,11 +601,11 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                         <div className="mt-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor={`price-${item.itemId}`} className="text-xs font-medium text-gray-600">Price (₹)</label>
-                                <input id={`price-${item.itemId}`} type="number" value={item.price} onChange={(e) => handleItemPriceChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.00" step="0.01" min="0" required onFocus={e => e.target.select()} />
+                                <input id={`price-${item.itemId}`} type="number" value={item.price === 0 ? '' : item.price} onChange={(e) => handleItemPriceChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="Price" step="0.01" required onFocus={e => e.target.select()} />
                             </div>
                             <div>
                                 <label htmlFor={`qty-${item.itemId}`} className="text-xs font-medium text-gray-600">Quantity</label>
-                                <input id={`qty-${item.itemId}`} type="number" value={item.quantity} onChange={e => handleQuantityChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" min="1" step="1" required onFocus={e => e.target.select()} />
+                                <input id={`qty-${item.itemId}`} type="number" value={item.quantity === 0 ? '' : item.quantity} onChange={e => handleQuantityChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="Qty" step="1" required onFocus={e => e.target.select()} />
                             </div>
                         </div>
                     </div>
