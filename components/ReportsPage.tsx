@@ -158,9 +158,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
             data = filteredAndSortedBills.map(bill => ({
                 'Bill ID': bill.id,
                 'Date & Time': new Date(bill.date).toLocaleString(),
-                'Type': bill.type,
                 'Customer': bill.customerName,
                 'Item Summary (Category/Grams)': formatItemSummaryForExcel(bill.items),
+                'Type': bill.type,
                 'Amount (INR)': bill.grandTotal,
                 'Created By': userNameMap.get(bill.createdBy) || bill.createdBy
             }));
@@ -237,8 +237,8 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                     <tr className="border-b">
                                         <th className="p-3 cursor-pointer" onClick={() => handleSort('customerName')}>Customer <SortIndicator columnKey="customerName"/></th>
                                         <th className="p-3 cursor-pointer" onClick={() => handleSort('date')}>Date & Time <SortIndicator columnKey="date"/></th>
-                                        <th className="p-3 cursor-pointer" onClick={() => handleSort('type')}>Type <SortIndicator columnKey="type"/></th>
                                         <th className="p-3">Item Summary (Category/Grams)</th>
+                                        <th className="p-3 cursor-pointer" onClick={() => handleSort('type')}>Type <SortIndicator columnKey="type"/></th>
                                         <th className="p-3 text-right cursor-pointer" onClick={() => handleSort('grandTotal')}>Amount <SortIndicator columnKey="grandTotal"/></th>
                                         <th className="p-3 hidden md:table-cell">Bill ID</th>
                                     </tr>
@@ -248,6 +248,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                         <tr key={bill.id} className="border-b hover:bg-gray-50">
                                             <td className="p-3 font-semibold">{bill.customerName}</td>
                                             <td className="p-3 text-sm text-gray-600 whitespace-nowrap">{new Date(bill.date).toLocaleString()}</td>
+                                            <td className="p-3">{formatItemSummary(bill.items)}</td>
                                             <td className="p-3">
                                                 <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${
                                                     bill.type === 'INVOICE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -255,7 +256,6 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                                     {bill.type.toLowerCase()}
                                                 </span>
                                             </td>
-                                            <td className="p-3">{formatItemSummary(bill.items)}</td>
                                             <td className="p-3 text-right font-medium">{formatCurrency(bill.grandTotal)}</td>
                                             <td className="p-3 hidden md:table-cell font-mono text-xs">{bill.id}</td>
                                         </tr>
