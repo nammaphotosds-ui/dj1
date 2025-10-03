@@ -87,7 +87,7 @@ const SettingsPage: React.FC = () => {
 
             <ManageSyncRequests />
 
-            <div className="bg-white p-6 rounded-lg shadow-md border">
+            <div className="hidden md:block bg-white p-6 rounded-lg shadow-md border">
                 <h2 className="text-xl font-bold mb-2">Google Drive Integration</h2>
                 <p className="text-gray-600 mb-4">Your application data is securely stored and synced with your connected Google Drive account.</p>
                 
@@ -105,7 +105,7 @@ const SettingsPage: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-red-50 p-6 rounded-lg shadow-inner border border-red-200">
+            <div className="hidden md:block bg-red-50 p-6 rounded-lg shadow-inner border border-red-200">
                 <h2 className="text-xl font-bold text-red-800 mb-2">Danger Zone</h2>
                 <p className="text-red-700 mb-4">Permanently delete all transaction data. This will reset revenue to zero. This action cannot be undone.</p>
                 <button 
