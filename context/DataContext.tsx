@@ -351,41 +351,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
     };
 
-    if (billData.type === 'INVOICE') {
-        setInventory(prevInventory => {
-            const inventoryMap = new Map<string, JewelryItem>(
-                prevInventory.map(i => [i.id, { ...i }]) // Shallow copy items
-            );
+    // Update inventory for both ESTIMATE and INVOICE
+    setInventory(prevInventory => {
+        const inventoryMap = new Map<string, JewelryItem>(
+            prevInventory.map(i => [i.id, { ...i }]) // Shallow copy items
+        );
 
-            for (const billItem of billData.items) {
-                const inventoryItem = inventoryMap.get(billItem.itemId);
+        for (const billItem of billData.items) {
+            const inventoryItem = inventoryMap.get(billItem.itemId);
 
-                if (inventoryItem) {
-                    if (inventoryItem.quantity === 1 && billItem.weight > inventoryItem.weight) {
-                        console.error(`Bill item ${billItem.name} weight (${billItem.weight}) exceeds inventory weight (${inventoryItem.weight}). Skipping inventory update.`);
-                        toast.error(`Inventory issue for ${billItem.name}. Update skipped.`);
-                        continue;
-                    }
-
-                    if (inventoryItem.quantity > 1) {
-                        inventoryItem.quantity = Math.max(0, inventoryItem.quantity - billItem.quantity);
-                    } else if (inventoryItem.quantity === 1) {
-                        const remainingWeight = inventoryItem.weight - billItem.weight;
-                        
-                        if (remainingWeight < 0.001) {
-                            inventoryItem.quantity = 0;
-                            inventoryItem.weight = 0;
-                        } else {
-                            inventoryItem.weight = remainingWeight;
-                        }
-                    }
-                    
-                    inventoryMap.set(inventoryItem.id, inventoryItem);
+            if (inventoryItem) {
+                if (inventoryItem.quantity === 1 && billItem.weight > inventoryItem.weight) {
+                    console.error(`Bill item ${billItem.name} weight (${billItem.weight}) exceeds inventory weight (${inventoryItem.weight}). Skipping inventory update.`);
+                    toast.error(`Inventory issue for ${billItem.name}. Update skipped.`);
+                    continue;
                 }
+
+                if (inventoryItem.quantity > 1) {
+                    inventoryItem.quantity = Math.max(0, inventoryItem.quantity - billItem.quantity);
+                } else if (inventoryItem.quantity === 1) {
+                    const remainingWeight = inventoryItem.weight - billItem.weight;
+                    
+                    if (remainingWeight < 0.001) {
+                        inventoryItem.quantity = 0;
+                        inventoryItem.weight = 0;
+                    } else {
+                        inventoryItem.weight = remainingWeight;
+                    }
+                }
+                
+                inventoryMap.set(inventoryItem.id, inventoryItem);
             }
-            return Array.from(inventoryMap.values());
-        });
-    }
+        }
+        return Array.from(inventoryMap.values());
+    });
 
     if (currentUser.role === 'staff') {
         setStaffChanges(prev => ({ ...prev, bills: [...prev.bills, newBill] }));

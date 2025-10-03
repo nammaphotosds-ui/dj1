@@ -406,22 +406,20 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const handleBillTypeChange = (newType: BillType) => {
     setBillType(newType);
 
-    if (newType === BillType.INVOICE) {
-        const adjustments: string[] = [];
-        
-        const updatedItems = selectedItems.map(item => {
-            const inventoryItem = inventory.find(i => i.id === item.itemId);
-            if (inventoryItem && item.quantity > inventoryItem.quantity) {
-                adjustments.push(`Quantity for "${item.name}" was reduced to ${inventoryItem.quantity} (max stock).`);
-                return { ...item, quantity: inventoryItem.quantity };
-            }
-            return item;
-        });
-        
-        if (adjustments.length > 0) {
-            toast.error(adjustments.join('\n'));
-            setSelectedItems(updatedItems);
+    // Perform check for both ESTIMATE and INVOICE
+    const adjustments: string[] = [];
+    const updatedItems = selectedItems.map(item => {
+        const inventoryItem = inventory.find(i => i.id === item.itemId);
+        if (inventoryItem && item.quantity > inventoryItem.quantity) {
+            adjustments.push(`Quantity for "${item.name}" was reduced to ${inventoryItem.quantity} (max stock).`);
+            return { ...item, quantity: inventoryItem.quantity };
         }
+        return item;
+    });
+    
+    if (adjustments.length > 0) {
+        toast.error(adjustments.join('\n'));
+        setSelectedItems(updatedItems);
     }
   };
 
@@ -550,13 +548,12 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         return;
     }
 
-    if (billType === BillType.INVOICE) {
-      for (const item of selectedItems) {
-        const inventoryItem = inventory.find(i => i.id === item.itemId);
-        if (inventoryItem && item.quantity > inventoryItem.quantity) {
-          toast.error(`Error: Quantity for "${item.name}" (${item.quantity}) exceeds available stock (${inventoryItem.quantity}).`);
-          return;
-        }
+    // Perform check for both ESTIMATE and INVOICE
+    for (const item of selectedItems) {
+      const inventoryItem = inventory.find(i => i.id === item.itemId);
+      if (inventoryItem && item.quantity > inventoryItem.quantity) {
+        toast.error(`Error: Quantity for "${item.name}" (${item.quantity}) exceeds available stock (${inventoryItem.quantity}).`);
+        return;
       }
     }
 
