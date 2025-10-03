@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import type { GoogleTokenResponse } from '../../types';
@@ -27,19 +27,19 @@ export const WelcomeScreen: React.FC = () => (
 // --- Login Screens ---
 
 const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
-    const [gsiClient, setGsiClient] = useState<any>(null);
     const { setCurrentUser, setTokenResponse } = useAuthContext();
     const [error, setError] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isReady, setIsReady] = useState(false);
     const [isMedian, setIsMedian] = useState(false);
+    const googleButtonRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // @ts-ignore
         if (window.median && window.median.socialLogin) {
             setIsMedian(true);
             setIsReady(true);
-            return; // Don't initialize GSI in Median environment, use the native bridge instead
+            return; 
         }
 
         const initializeGsi = async () => {
@@ -50,28 +50,52 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                     throw new Error("Google Identity Services library failed to load.");
                 }
 
-                const client = google.accounts.oauth2.initTokenClient({
+                // This is the OAuth2 token client. It's responsible for getting the access token for Drive.
+                const tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID,
                     scope: 'https://www.googleapis.com/auth/drive.appdata',
-                    callback: (response: any) => {
+                    callback: (tokenResponse: any) => {
                         setIsConnecting(false);
-                        if (response.error) {
-                             console.error('Error from Google:', response);
-                             setError(`Failed to connect: ${response.error_description || response.error}. Please try again.`);
+                        if (tokenResponse.error) {
+                             console.error('Error from Google:', tokenResponse);
+                             setError(`Failed to connect: ${tokenResponse.error_description || tokenResponse.error}. Please try again.`);
                              setTokenResponse(null);
                              return;
                         }
-                        if (response.access_token) {
+                        if (tokenResponse.access_token) {
                             console.log('Received Access Token via GSI.');
-                            const tokenData = { ...response, expires_at: Date.now() + (response.expires_in * 1000) };
+                            const tokenData = { ...tokenResponse, expires_at: Date.now() + (tokenResponse.expires_in * 1000) };
                             setTokenResponse(tokenData);
                             setCurrentUser({ role: 'admin', id: 'admin' });
                             setError(null);
                         }
                     },
                 });
-                setGsiClient(client);
-                setIsReady(true);
+
+                // This initializes the "Sign In with Google" button.
+                // Its callback will trigger the token client.
+                google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: () => {
+                        // This callback fires after a successful sign-in from the button.
+                        // We use it as the user-initiated gesture to request the access token for Drive.
+                        setIsConnecting(true);
+                        setError(null);
+                        tokenClient.requestAccessToken({prompt: ''}); // prompt:'' prevents account chooser if already signed in.
+                    },
+                });
+
+                // Render the button into our ref container.
+                if (googleButtonRef.current) {
+                    google.accounts.id.renderButton(
+                        googleButtonRef.current,
+                        { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with' }
+                    );
+                    google.accounts.id.prompt(); // Display the One Tap prompt for returning users.
+                    setIsReady(true);
+                } else {
+                    console.warn("Google button ref was not available for rendering.");
+                }
 
             } catch (err) {
                 console.error("GSI initialization failed:", err);
@@ -83,59 +107,61 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
         initializeGsi();
     }, [setTokenResponse, setCurrentUser]);
 
+    // This function is now ONLY for the Median flow.
     const handleConnect = () => {
+        if (!isMedian) return;
+
         setIsConnecting(true);
         setError(null);
-
-        if (isMedian) {
-            // Median environment: Use the native social login bridge
-            console.log('Median environment detected, using median.socialLogin');
-            // @ts-ignore
-            window.median.socialLogin.login({
-                provider: 'google',
-                scopes: ['https://www.googleapis.com/auth/drive.appdata']
-            }).then((result: { accessToken: string }) => {
-                setIsConnecting(false);
-                if (result && result.accessToken) {
-                    console.log('Received Access Token via Median.');
-                    const tokenData: GoogleTokenResponse = {
-                        access_token: result.accessToken,
-                        expires_in: 3599, // Assume standard 1 hour lifetime
-                        scope: 'https://www.googleapis.com/auth/drive.appdata',
-                        token_type: 'Bearer',
-                        expires_at: Date.now() + (3599 * 1000)
-                    };
-                    setTokenResponse(tokenData);
-                    setCurrentUser({ role: 'admin', id: 'admin' });
-                } else {
-                    console.error('Median social login failed, no access token:', result);
-                    setError('Login through Median failed. Please try again.');
-                }
-            }).catch((err: any) => {
-                setIsConnecting(false);
-                console.error('Median social login error:', err);
-                setError(`Median Login Error: ${err.message || 'An unknown error occurred.'}`);
-            });
-        } else {
-            // Standard web environment: Use GSI client (popup flow)
-            console.log('Standard web environment, using GSI client');
-            if (gsiClient) {
-                gsiClient.requestAccessToken();
+        
+        console.log('Median environment detected, using median.socialLogin');
+        // @ts-ignore
+        window.median.socialLogin.login({
+            provider: 'google',
+            scopes: ['https://www.googleapis.com/auth/drive.appdata']
+        }).then((result: { accessToken: string }) => {
+            setIsConnecting(false);
+            if (result && result.accessToken) {
+                console.log('Received Access Token via Median.');
+                const tokenData: GoogleTokenResponse = {
+                    access_token: result.accessToken,
+                    expires_in: 3599,
+                    scope: 'https://www.googleapis.com/auth/drive.appdata',
+                    token_type: 'Bearer',
+                    expires_at: Date.now() + (3599 * 1000)
+                };
+                setTokenResponse(tokenData);
+                setCurrentUser({ role: 'admin', id: 'admin' });
             } else {
-                setIsConnecting(false);
-                setError('Google Sign-In is still initializing. Please wait a moment.');
+                console.error('Median social login failed, no access token:', result);
+                setError('Login through Median failed. Please try again.');
             }
-        }
+        }).catch((err: any) => {
+            setIsConnecting(false);
+            console.error('Median social login error:', err);
+            setError(`Median Login Error: ${err.message || 'An unknown error occurred.'}`);
+        });
     };
 
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
              <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
              <h2 className="text-3xl font-serif text-brand-charcoal mb-2">Admin Login</h2>
-             <p className="text-gray-600 mb-8">Sign in with your Google account to manage the store.</p>
-             <button onClick={handleConnect} disabled={isConnecting || !isReady} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
-                {isConnecting ? 'Connecting...' : !isReady ? 'Initializing Sign-In...' : 'Connect with Google'}
-             </button>
+             <p className="text-gray-600 mb-6">Sign in with your Google account to manage the store.</p>
+
+             <div className="flex flex-col items-center justify-center min-h-[50px]">
+                {isMedian ? (
+                    <button onClick={handleConnect} disabled={isConnecting || !isReady} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
+                        {isConnecting ? 'Connecting...' : 'Connect with Google'}
+                    </button>
+                ) : isReady ? (
+                    <div ref={googleButtonRef} className={isConnecting ? 'opacity-50 pointer-events-none' : ''}></div>
+                ) : (
+                    <p className="text-gray-500">Initializing Sign-In...</p>
+                )}
+                {isConnecting && <p className="text-gray-500 mt-2">Connecting...</p>}
+             </div>
+             
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
              <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN Entry</button>
         </div>
