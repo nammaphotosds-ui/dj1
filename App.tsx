@@ -26,10 +26,23 @@ const AppContent: React.FC = () => {
   const { 
     isAddCustomerModalOpen, closeAddCustomerModal,
     isAddStaffModalOpen, closeAddStaffModal,
-    isAddDistributorModalOpen, closeAddDistributorModal
+    isAddDistributorModalOpen, closeAddDistributorModal,
+    isFullscreen, toggleFullscreen
   } = useUIContext();
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
   const [showSyncScreen, setShowSyncScreen] = useState(false);
+
+  useEffect(() => {
+    // Automatically request fullscreen once the app is initialized,
+    // ensuring the login pages and the main app are fullscreen.
+    if (isInitialized && !isFullscreen) {
+      // A small timeout can help ensure the browser is ready for the request.
+      const timer = setTimeout(() => {
+        toggleFullscreen();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialized, isFullscreen, toggleFullscreen]);
 
 
   const handleLogout = () => {

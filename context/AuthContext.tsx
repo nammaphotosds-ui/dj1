@@ -23,16 +23,9 @@ const DEFAULT_PIN_HASH = 'a2123545b78083c0f43b51904a433f446002f260ea321588c831b3
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [tokenResponse, setTokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
   const [currentUser, setCurrentUser] = useLocalStorage<CurrentUser | null>('currentUser', null);
-  const [adminPinHash, setAdminPinHash] = useLocalStorage<string | null>('adminPinHash', null);
+  const [adminPinHash, setAdminPinHash] = useLocalStorage<string>('adminPinHash', DEFAULT_PIN_HASH);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Set the default PIN hash if none exists.
-    if (!adminPinHash) {
-      setAdminPinHash(DEFAULT_PIN_HASH);
-    }
-  }, [adminPinHash, setAdminPinHash]);
 
   useEffect(() => {
     const initAuth = () => {
