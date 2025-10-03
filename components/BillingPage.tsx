@@ -129,6 +129,8 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                 <div className="mt-4 text-[10px] text-brand-gray">
                                     <p className="font-bold">Terms & Conditions:</p>
                                     <p>1. Goods once sold will not be taken back.</p>
+                                    <p>2. Physically damaged items are not replaced.</p>
+                                    <p>3. Exchange available within 4 days.</p>
                                 </div>
                             </div>
                             <div className="w-1/2 text-xs">
