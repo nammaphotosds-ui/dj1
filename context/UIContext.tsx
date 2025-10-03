@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface UIContextType {
   isAddCustomerModalOpen: boolean;
@@ -10,8 +10,6 @@ interface UIContextType {
   isAddDistributorModalOpen: boolean;
   openAddDistributorModal: () => void;
   closeAddDistributorModal: () => void;
-  isFullscreen: boolean;
-  toggleFullscreen: () => void;
   initialInventoryFilter: string | null;
   setInitialInventoryFilter: (category: string | null) => void;
 }
@@ -22,23 +20,8 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
   const [isAddDistributorModalOpen, setIsAddDistributorModalOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const [initialInventoryFilter, setInitialInventoryFilter] = useState<string | null>(null);
 
-  useEffect(() => {
-    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
-  }, []);
-  
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => console.error(`Fullscreen error: ${err.message}`));
-    } else if (document.exitFullscreen) {
-        document.exitFullscreen();
-    }
-  };
-  
   const openAddCustomerModal = () => setIsAddCustomerModalOpen(true);
   const closeAddCustomerModal = () => setIsAddCustomerModalOpen(false);
 
@@ -53,7 +36,6 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         isAddCustomerModalOpen, openAddCustomerModal, closeAddCustomerModal, 
         isAddStaffModalOpen, openAddStaffModal, closeAddStaffModal,
         isAddDistributorModalOpen, openAddDistributorModal, closeAddDistributorModal,
-        isFullscreen, toggleFullscreen, 
         initialInventoryFilter, setInitialInventoryFilter 
     }}>
       {children}
