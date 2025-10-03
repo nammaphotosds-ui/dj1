@@ -31,17 +31,9 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const [error, setError] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isReady, setIsReady] = useState(false);
-    const [isMedian, setIsMedian] = useState(false);
     const googleButtonRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // @ts-ignore
-        if (window.median && window.median.socialLogin) {
-            setIsMedian(true);
-            setIsReady(true);
-            return; 
-        }
-
         const initializeGsi = async () => {
             try {
                 // @ts-ignore
@@ -106,43 +98,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
 
         initializeGsi();
     }, [setTokenResponse, setCurrentUser]);
-
-    // This function is now ONLY for the Median flow.
-    const handleConnect = () => {
-        if (!isMedian) return;
-
-        setIsConnecting(true);
-        setError(null);
-        
-        console.log('Median environment detected, using median.socialLogin');
-        // @ts-ignore
-        window.median.socialLogin.login({
-            provider: 'google',
-            scopes: ['https://www.googleapis.com/auth/drive.appdata']
-        }).then((result: { accessToken: string }) => {
-            setIsConnecting(false);
-            if (result && result.accessToken) {
-                console.log('Received Access Token via Median.');
-                const tokenData: GoogleTokenResponse = {
-                    access_token: result.accessToken,
-                    expires_in: 3599,
-                    scope: 'https://www.googleapis.com/auth/drive.appdata',
-                    token_type: 'Bearer',
-                    expires_at: Date.now() + (3599 * 1000)
-                };
-                setTokenResponse(tokenData);
-                setCurrentUser({ role: 'admin', id: 'admin' });
-            } else {
-                console.error('Median social login failed, no access token:', result);
-                setError('Login through Median failed. Please try again.');
-            }
-        }).catch((err: any) => {
-            setIsConnecting(false);
-            console.error('Median social login error:', err);
-            setError(`Median Login Error: ${err.message || 'An unknown error occurred.'}`);
-        });
-    };
-
+    
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
              <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
@@ -150,11 +106,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
              <p className="text-gray-600 mb-6">Sign in with your Google account to manage the store.</p>
 
              <div className="flex flex-col items-center justify-center min-h-[50px]">
-                {isMedian ? (
-                    <button onClick={handleConnect} disabled={isConnecting || !isReady} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
-                        {isConnecting ? 'Connecting...' : 'Connect with Google'}
-                    </button>
-                ) : isReady ? (
+                {isReady ? (
                     <div ref={googleButtonRef} className={isConnecting ? 'opacity-50 pointer-events-none' : ''}></div>
                 ) : (
                     <p className="text-gray-500">Initializing Sign-In...</p>
@@ -167,6 +119,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
         </div>
     );
 };
+
 
 const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const { loginAsStaff } = useAuthContext();
