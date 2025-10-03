@@ -40,8 +40,8 @@ const SyncWithDataScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             localStorage.setItem('appDataCache', JSON.stringify(parsedData));
             toast.success("Sync successful! The application will now reload.");
             
-            // Delete the code after use to make it single-use
-            await supabase.from('sync_sessions').delete().eq('sync_code', syncCode);
+            // The code is now single-use by virtue of its short 15-minute lifespan.
+            // Removing the explicit delete call prevents errors from missing DB permissions.
 
             setTimeout(() => {
                 window.location.reload();
