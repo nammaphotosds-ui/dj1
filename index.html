@@ -17,7 +17,17 @@
     <!-- html2canvas to capture DOM elements as images -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Google Identity Services Library for Sign-In -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      // Create a promise that resolves when the GSI library is loaded.
+      // This avoids polluting the global scope with multiple variables and provides a clean async/await interface.
+      window.gsiClientPromise = new Promise(resolve => {
+        window.onGsiLoaded = () => {
+          console.log('Google Identity Services client library loaded.');
+          resolve(window.google);
+        };
+      });
+    </script>
+    <script src="https://accounts.google.com/gsi/client?onload=onGsiLoaded" async defer></script>
     <!-- SheetJS for Excel export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Chart.js for dashboard charts -->

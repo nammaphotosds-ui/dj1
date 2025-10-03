@@ -33,13 +33,15 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const [isConnecting, setIsConnecting] = useState(false);
 
     useEffect(() => {
-        if (gsiClient) return;
-        const intervalId = setInterval(() => {
-            // @ts-ignore
-            if (window.google) {
-                clearInterval(intervalId);
+        const initializeGsi = async () => {
+            try {
                 // @ts-ignore
-                const client = window.google.accounts.oauth2.initTokenClient({
+                const google = await window.gsiClientPromise;
+                if (!google) {
+                    throw new Error("Google Identity Services library failed to load.");
+                }
+
+                const client = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID,
                     scope: 'https://www.googleapis.com/auth/drive.appdata',
                     callback: (response: any) => {
@@ -60,17 +62,23 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                     },
                 });
                 setGsiClient(client);
+
+            } catch (err) {
+                console.error("GSI initialization failed:", err);
+                setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
             }
-        }, 200);
-        return () => clearInterval(intervalId);
-    }, [gsiClient, setTokenResponse, setCurrentUser]);
+        };
+
+        initializeGsi();
+    }, [setTokenResponse, setCurrentUser]);
 
     const handleConnect = () => {
         if (gsiClient) {
             setIsConnecting(true);
+            setError(null);
             gsiClient.requestAccessToken();
         } else {
-            setError('Google Sign-In is not ready. Please try again.');
+            setError('Google Sign-In is still initializing. Please wait a moment.');
         }
     };
 
