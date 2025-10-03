@@ -96,3 +96,13 @@ export type CurrentUser = {
   role: 'admin' | 'staff';
   id: string; // 'admin' for admin, staff ID for staff
 };
+
+export interface StaffSyncRequest {
+  id: number;
+  created_at: string;
+  staff_id: string;
+  staff_name: string;
+  data_payload: string;
+  status: 'pending' | 'merged' | 'rejected';
+  changes_count: number;
+}

@@ -1,60 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../../context/DataContext';
+import { useAuthContext } from '../../context/AuthContext';
 import Modal from '../common/Modal';
+import { supabase } from '../../utils/supabase';
 
 const StaffSyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { getStaffChangesPayload, clearStaffChanges } = useDataContext();
-    const [syncData, setSyncData] = useState<string | null>(null);
+    const { getStaffChangesPayload, clearStaffChanges, userNameMap } = useDataContext();
+    const { currentUser } = useAuthContext();
     const [changesCount, setChangesCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
-            const { payload, changesCount } = getStaffChangesPayload();
-            setSyncData(payload);
-            setChangesCount(changesCount);
+            const { changesCount: count } = getStaffChangesPayload();
+            setChangesCount(count);
         } else {
-            setSyncData(null);
-            setChangesCount(0);
+            setIsLoading(false);
         }
     }, [isOpen, getStaffChangesPayload]);
 
-    const handleCopy = () => {
-        if (syncData) {
-            navigator.clipboard.writeText(syncData);
-            toast.success("Data copied to clipboard!");
+    const handleSendChanges = async () => {
+        if (!currentUser || currentUser.role !== 'staff') {
+            toast.error("Authentication error.");
+            return;
         }
-    };
-    
-    const handleSyncComplete = () => {
-        if (window.confirm("Have you successfully sent this data to the admin? This will clear your local changes to prevent duplicates on the next sync.")) {
-            clearStaffChanges();
-            toast.success("Local changes cleared. Ready for next sync.");
-            onClose();
+
+        setIsLoading(true);
+        const { payload } = getStaffChangesPayload();
+        
+        const syncRequest = {
+            staff_id: currentUser.id,
+            staff_name: userNameMap.get(currentUser.id) || currentUser.id,
+            data_payload: payload,
+            changes_count: changesCount,
+            status: 'pending'
+        };
+
+        const { error } = await supabase
+            .from('staff_sync_requests')
+            .insert(syncRequest);
+
+        if (error) {
+            toast.error("Failed to send changes. Please try again.");
+            console.error("Supabase insert error:", error);
+            setIsLoading(false);
+            return;
         }
+
+        toast.success("Changes sent to admin for review!");
+        clearStaffChanges();
+        setIsLoading(false);
+        onClose();
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Sync Changes to Admin">
             <div className="text-center">
-                {changesCount > 0 && syncData ? (
+                {changesCount > 0 ? (
                     <>
                         <p className="text-gray-600 mb-4">
-                            You have <span className="font-bold">{changesCount}</span> new change(s). Copy this text and send it to an admin to merge your work.
+                            You have <span className="font-bold text-lg text-brand-charcoal">{changesCount}</span> new change(s) ready to send to the admin for merging.
                         </p>
-                        <div className="w-full text-left my-4">
-                           <textarea 
-                                readOnly 
-                                value={syncData}
-                                className="w-full p-2 border rounded bg-gray-50 text-xs h-32"
-                                onFocus={(e) => e.target.select()}
-                            />
-                            <button onClick={handleCopy} className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                                Copy Data
-                            </button>
-                        </div>
-                        <button onClick={handleSyncComplete} className="mt-4 w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition">
-                            I've Sent the Data, Clear My Changes
+                        <button 
+                            onClick={handleSendChanges} 
+                            disabled={isLoading}
+                            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70"
+                        >
+                            {isLoading ? 'Sending...' : 'Send Changes to Admin'}
                         </button>
                     </>
                 ) : (

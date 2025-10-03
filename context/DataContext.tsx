@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { BillType, JewelryCategory } from '../types';
-import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog, BillItem } from '../types';
+import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog, BillItem, StaffSyncRequest } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
 import * as drive from '../utils/googleDrive';
 import { hashPassword } from '../utils/crypto';
 import { useAuthContext } from './AuthContext';
+import { supabase } from '../utils/supabase';
 
 interface DataContextType {
   inventory: JewelryItem[];
@@ -38,7 +39,8 @@ interface DataContextType {
   getSyncDataPayload: () => string;
   getStaffChangesPayload: () => { payload: string; changesCount: number };
   clearStaffChanges: () => void;
-  mergeStaffData: (payload: string) => Promise<{ customersAdded: number; billsAdded: number }>;
+  pendingSyncRequests: StaffSyncRequest[];
+  processSyncRequest: (requestId: number, payload: string, action: 'merge' | 'reject') => Promise<{ customersAdded: number; billsAdded: number; }>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -59,6 +61,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [driveFileId, setDriveFileId] = useLocalStorage<string | null>('driveFileId', null);
   const [error, setError] = useState<string | null>(null);
   const isInitialLoad = useRef(true);
+  const [pendingSyncRequests, setPendingSyncRequests] = useState<StaffSyncRequest[]>([]);
   
   const customers: Customer[] = useMemo(() => {
     const billsByCustomer = new Map<string, Bill[]>();
@@ -141,6 +144,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Data Loading Effect
   useEffect(() => {
+    const fetchPendingSyncRequests = async () => {
+        if (currentUser?.role !== 'admin') return;
+        try {
+            const { data, error } = await supabase
+                .from('staff_sync_requests')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: true });
+            if (error) throw error;
+            setPendingSyncRequests(data || []);
+        } catch (e) {
+            console.error("Failed to fetch sync requests:", e);
+            toast.error("Could not fetch pending staff sync requests.");
+        }
+    };
+    
     const loadAndSetData = (content: any) => {
         const inventoryData = content.inventory || [];
         const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
@@ -207,6 +226,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setInventory([]); setRawCustomers([]); setBills([]); setStaff([]); setDistributors([]); setActivityLogs([]); setAdminProfile({ name: 'Admin' });
                 localStorage.setItem('appDataCache', JSON.stringify(initialState));
             }
+            fetchPendingSyncRequests();
         } catch (e: any) {
             console.error("Google Drive initialization failed", e);
             setError("Failed to connect to Google Drive. The token might be invalid.");
@@ -529,12 +549,37 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { customersAdded: uniqueNewCustomers.length, billsAdded: uniqueNewBills.length };
   };
 
+  const processSyncRequest = async (requestId: number, payload: string, action: 'merge' | 'reject'): Promise<{ customersAdded: number; billsAdded: number; }> => {
+    if (currentUser?.role !== 'admin') throw new Error("Permission denied");
+    
+    let result = { customersAdded: 0, billsAdded: 0 };
+    if (action === 'merge') {
+        result = await mergeStaffData(payload);
+    }
+
+    const newStatus = action === 'merge' ? 'merged' : 'rejected';
+    const { error } = await supabase
+        .from('staff_sync_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+    
+    if (error) {
+        console.error("Failed to update sync request status:", error);
+        toast.error("Data was processed but failed to update sync status. Please check for duplicates.");
+        throw new Error("Failed to update sync request status.");
+    }
+    
+    setPendingSyncRequests(prev => prev.filter(req => req.id !== requestId));
+    
+    return result;
+  };
+
   const getCustomerById = (id: string) => customers.find(c => c.id === id);
   const getBillsByCustomerId = (id: string) => bills.filter(b => b.customerId === id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, mergeStaffData }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest }}>
       {children}
     </DataContext.Provider>
   );
