@@ -421,6 +421,70 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         }
     }
   };
+
+  const handleItemWeightChange = (index: number, newWeightStr: string) => {
+    const newWeight = parseFloat(newWeightStr);
+    const weight = isNaN(newWeight) || newWeight < 0 ? 0 : newWeight;
+
+    setSelectedItems(prevItems => {
+        const newItems = [...prevItems];
+        const itemToUpdate = newItems[index];
+        const inventoryItem = inventory.find(i => i.id === itemToUpdate.itemId);
+
+        if (!inventoryItem) return prevItems;
+        
+        if (inventoryItem.quantity > 1) {
+             return prevItems;
+        }
+
+        let finalWeight = weight;
+        if (weight > inventoryItem.weight) {
+            toast.error(`Sell weight cannot exceed stock weight of ${inventoryItem.weight}g.`, { duration: 2000 });
+            finalWeight = inventoryItem.weight;
+        }
+        
+        let ratePer10g = 0;
+        if (inventoryItem.category === JewelryCategory.GOLD) ratePer10g = parseFloat(goldRatePer10g) || 0;
+        else if (inventoryItem.category === JewelryCategory.SILVER) ratePer10g = parseFloat(silverRatePer10g) || 0;
+        else if (inventoryItem.category === JewelryCategory.PLATINUM) ratePer10g = parseFloat(platinumRatePer10g) || 0;
+        
+        const newPrice = ratePer10g > 0 ? (finalWeight / 10) * ratePer10g : 0;
+
+        newItems[index] = {
+            ...itemToUpdate,
+            weight: finalWeight,
+            price: newPrice,
+            quantity: 1, 
+        };
+        
+        return newItems;
+    });
+  };
+  
+  const handleItemQuantityChange = (index: number, newQuantityStr: string) => {
+    const newQuantity = parseInt(newQuantityStr, 10);
+    const quantity = isNaN(newQuantity) || newQuantity < 1 ? 1 : newQuantity;
+    
+    setSelectedItems(prevItems => {
+        const newItems = [...prevItems];
+        const itemToUpdate = newItems[index];
+        const inventoryItem = inventory.find(i => i.id === itemToUpdate.itemId);
+        if (!inventoryItem) return prevItems;
+
+        let finalQuantity = quantity;
+        if (quantity > inventoryItem.quantity) {
+            toast.error(`Cannot sell more than the available quantity of ${inventoryItem.quantity}.`);
+            finalQuantity = inventoryItem.quantity;
+        }
+
+        newItems[index] = {
+            ...itemToUpdate,
+            quantity: finalQuantity
+        };
+        
+        return newItems;
+    });
+  };
   
     const generatePdfBlob = (componentToRender: React.ReactElement): Promise<Blob | null> => {
         return new Promise(resolve => {
@@ -661,30 +725,58 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                 />
             </div>
             <div className="mt-4 max-h-72 overflow-y-auto pr-2">
-                 {selectedItems.map(item => (
-                    <div key={item.itemId} className="bg-gray-50 p-3 rounded mb-2 border">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="font-semibold">{item.name}</p>
-                                <p className="text-xs text-gray-500">S/N: {item.serialNo} | {item.weight.toFixed(3)}g</p>
+                 {selectedItems.map((item, index) => {
+                     const inventoryItem = inventory.find(i => i.id === item.itemId);
+                     const canDoPartialSale = inventoryItem && inventoryItem.quantity === 1;
+
+                     return (
+                        <div key={item.itemId} className="bg-gray-50 p-3 rounded mb-2 border">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-semibold">{item.name}</p>
+                                    <p className="text-xs text-gray-500">
+                                        S/N: {item.serialNo} | Stock: {
+                                            canDoPartialSale 
+                                            ? `${inventoryItem?.weight.toFixed(3)}g` 
+                                            : `${inventoryItem?.quantity} units @ ${inventoryItem?.weight.toFixed(3)}g`
+                                        }
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => handleRemoveItem(item.itemId)} className="text-red-500 hover:text-red-700 font-bold text-xl leading-none -mt-1 -mr-1">&times;</button>
                             </div>
-                            <button type="button" onClick={() => handleRemoveItem(item.itemId)} className="text-red-500 hover:text-red-700 font-bold text-xl leading-none -mt-1 -mr-1">&times;</button>
-                        </div>
-                        <div className="mt-2">
-                            <div>
-                                <label htmlFor={`price-${item.itemId}`} className="text-xs font-medium text-gray-600">Price (₹)</label>
-                                <input
-                                    id={`price-${item.itemId}`}
-                                    type="text"
-                                    value={item.price > 0 ? item.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
-                                    className="w-full p-1.5 border rounded bg-gray-100"
-                                    placeholder="Auto-calculated"
-                                    readOnly
-                                />
+                            <div className="mt-2 grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-gray-600">
+                                        {canDoPartialSale ? 'Sell Weight (g)' : 'Quantity'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={canDoPartialSale ? (item.weight === 0 ? '' : item.weight) : item.quantity}
+                                        onChange={(e) => {
+                                            if (canDoPartialSale) {
+                                                handleItemWeightChange(index, e.target.value);
+                                            } else {
+                                                handleItemQuantityChange(index, e.target.value);
+                                            }
+                                        }}
+                                        className="w-full p-1.5 border rounded"
+                                        step={canDoPartialSale ? "0.001" : "1"}
+                                        min={canDoPartialSale ? "0" : "1"}
+                                        max={canDoPartialSale ? inventoryItem?.weight : inventoryItem?.quantity}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-gray-600">Price (₹)</label>
+                                    <input
+                                        type="text"
+                                        value={(item.price * item.quantity).toLocaleString('en-IN')}
+                                        className="w-full p-1.5 border rounded bg-gray-100" readOnly
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                 ))}
+                     )
+                 })}
             </div>
         </div>
 

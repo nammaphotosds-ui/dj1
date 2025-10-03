@@ -336,12 +336,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (billData.type === 'INVOICE') {
         setInventory(prevInventory => {
-            const inventoryMap = new Map<string, JewelryItem>(prevInventory.map(i => [i.id, i]));
+            const inventoryMap = new Map<string, JewelryItem>(
+                prevInventory.map(i => [i.id, { ...i }]) // Shallow copy items
+            );
+
             for (const billItem of billData.items) {
-                const item = inventoryMap.get(billItem.itemId);
-                if (item) {
-                    const updatedItem = { ...item, quantity: Math.max(0, item.quantity - billItem.quantity) };
-                    inventoryMap.set(item.id, updatedItem);
+                const inventoryItem = inventoryMap.get(billItem.itemId);
+
+                if (inventoryItem) {
+                    if (inventoryItem.quantity === 1 && billItem.weight > inventoryItem.weight) {
+                        console.error(`Bill item ${billItem.name} weight (${billItem.weight}) exceeds inventory weight (${inventoryItem.weight}). Skipping inventory update.`);
+                        toast.error(`Inventory issue for ${billItem.name}. Update skipped.`);
+                        continue;
+                    }
+
+                    if (inventoryItem.quantity > 1) {
+                        inventoryItem.quantity = Math.max(0, inventoryItem.quantity - billItem.quantity);
+                    } else if (inventoryItem.quantity === 1) {
+                        const remainingWeight = inventoryItem.weight - billItem.weight;
+                        
+                        if (remainingWeight < 0.001) {
+                            inventoryItem.quantity = 0;
+                            inventoryItem.weight = 0;
+                        } else {
+                            inventoryItem.weight = remainingWeight;
+                        }
+                    }
+                    
+                    inventoryMap.set(inventoryItem.id, inventoryItem);
                 }
             }
             return Array.from(inventoryMap.values());
