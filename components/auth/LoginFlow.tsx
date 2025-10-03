@@ -31,8 +31,17 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const { setCurrentUser, setTokenResponse } = useAuthContext();
     const [error, setError] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
+    const [isReady, setIsReady] = useState(false);
+    const [isMedian, setIsMedian] = useState(false);
 
     useEffect(() => {
+        // @ts-ignore
+        if (window.median && window.median.socialLogin) {
+            setIsMedian(true);
+            setIsReady(true);
+            return; // Don't initialize GSI in Median environment, use the native bridge instead
+        }
+
         const initializeGsi = async () => {
             try {
                 // @ts-ignore
@@ -53,7 +62,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                              return;
                         }
                         if (response.access_token) {
-                            console.log('Received Access Token.');
+                            console.log('Received Access Token via GSI.');
                             const tokenData = { ...response, expires_at: Date.now() + (response.expires_in * 1000) };
                             setTokenResponse(tokenData);
                             setCurrentUser({ role: 'admin', id: 'admin' });
@@ -62,10 +71,12 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                     },
                 });
                 setGsiClient(client);
+                setIsReady(true);
 
             } catch (err) {
                 console.error("GSI initialization failed:", err);
                 setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
+                setIsReady(false);
             }
         };
 
@@ -73,12 +84,47 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     }, [setTokenResponse, setCurrentUser]);
 
     const handleConnect = () => {
-        if (gsiClient) {
-            setIsConnecting(true);
-            setError(null);
-            gsiClient.requestAccessToken();
+        setIsConnecting(true);
+        setError(null);
+
+        if (isMedian) {
+            // Median environment: Use the native social login bridge
+            console.log('Median environment detected, using median.socialLogin');
+            // @ts-ignore
+            window.median.socialLogin.login({
+                provider: 'google',
+                scopes: ['https://www.googleapis.com/auth/drive.appdata']
+            }).then((result: { accessToken: string }) => {
+                setIsConnecting(false);
+                if (result && result.accessToken) {
+                    console.log('Received Access Token via Median.');
+                    const tokenData: GoogleTokenResponse = {
+                        access_token: result.accessToken,
+                        expires_in: 3599, // Assume standard 1 hour lifetime
+                        scope: 'https://www.googleapis.com/auth/drive.appdata',
+                        token_type: 'Bearer',
+                        expires_at: Date.now() + (3599 * 1000)
+                    };
+                    setTokenResponse(tokenData);
+                    setCurrentUser({ role: 'admin', id: 'admin' });
+                } else {
+                    console.error('Median social login failed, no access token:', result);
+                    setError('Login through Median failed. Please try again.');
+                }
+            }).catch((err: any) => {
+                setIsConnecting(false);
+                console.error('Median social login error:', err);
+                setError(`Median Login Error: ${err.message || 'An unknown error occurred.'}`);
+            });
         } else {
-            setError('Google Sign-In is still initializing. Please wait a moment.');
+            // Standard web environment: Use GSI client (popup flow)
+            console.log('Standard web environment, using GSI client');
+            if (gsiClient) {
+                gsiClient.requestAccessToken();
+            } else {
+                setIsConnecting(false);
+                setError('Google Sign-In is still initializing. Please wait a moment.');
+            }
         }
     };
 
@@ -87,8 +133,8 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
              <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
              <h2 className="text-3xl font-serif text-brand-charcoal mb-2">Admin Login</h2>
              <p className="text-gray-600 mb-8">Sign in with your Google account to manage the store.</p>
-             <button onClick={handleConnect} disabled={isConnecting || !gsiClient} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
-                {isConnecting ? 'Connecting...' : !gsiClient ? 'Initializing Sign-In...' : 'Connect with Google'}
+             <button onClick={handleConnect} disabled={isConnecting || !isReady} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
+                {isConnecting ? 'Connecting...' : !isReady ? 'Initializing Sign-In...' : 'Connect with Google'}
              </button>
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
              <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN Entry</button>
