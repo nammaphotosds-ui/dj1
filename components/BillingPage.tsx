@@ -113,8 +113,8 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                             </td>
                                             <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.serialNo}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(3)}</td>
-                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{ratePerGram.toLocaleString('en-IN')}</td>
-                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{amount.toLocaleString('en-IN')}</td>
+                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{ratePerGram.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         </tr>
                                     );
                                 })}
