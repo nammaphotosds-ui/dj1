@@ -1,8 +1,8 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
-import { Page, JewelryCategory, Bill, BillItem } from '../types';
-import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon } from './common/Icons';
+import { Page, JewelryCategory, Bill, BillItem, Staff } from '../types';
+import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon, StaffIcon } from './common/Icons';
 
 declare const Chart: any;
 
@@ -27,8 +27,6 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 const CategoryWeights: React.FC = () => {
     const { inventory } = useDataContext();
     const weights = useMemo(() => {
-        // FIX: Explicitly type `result` as Record<string, number> to ensure TypeScript
-        // correctly infers `weight` as a number after using Object.entries.
         const result: Record<string, number> = {
             [JewelryCategory.GOLD]: 0,
             [JewelryCategory.SILVER]: 0,
@@ -52,7 +50,6 @@ const CategoryWeights: React.FC = () => {
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100 h-full">
             <h2 className="text-xl font-bold mb-4 flex items-center"><WeightIcon /> <span className="ml-2">Weight by Category</span></h2>
             <div className="space-y-4">
-                {/* FIX: Replaced Object.entries with Object.keys to ensure proper type inference for `weight`. */}
                 {Object.keys(weights).map((category) => (
                     <div key={category} className="flex items-center justify-between text-lg">
                         <div className="flex items-center">
@@ -163,7 +160,7 @@ const SalesChart: React.FC = () => {
 };
 
 const RecentTransactions: React.FC = () => {
-    const { bills, inventory, getCustomerById } = useDataContext();
+    const { bills, inventory } = useDataContext();
 
     const recentBills = useMemo(() => {
         return [...bills].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
@@ -195,7 +192,7 @@ const RecentTransactions: React.FC = () => {
     };
 
     return (
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100 h-full">
           <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
           <div className="space-y-3 max-h-72 overflow-y-auto">
             {recentBills.map(bill => (
@@ -217,6 +214,68 @@ const RecentTransactions: React.FC = () => {
         </div>
     )
 }
+
+const StaffPerformance: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCurrentPage }) => {
+    const { staff, customers, bills, userNameMap } = useDataContext();
+
+    const staffStats = useMemo(() => {
+        return staff.map(s => {
+            const customersAdded = customers.filter(c => c.createdBy === s.id).length;
+            const billsCreated = bills.filter(b => b.createdBy === s.id);
+            const revenueGenerated = billsCreated.reduce((sum, bill) => sum + bill.grandTotal, 0);
+            return {
+                id: s.id,
+                name: userNameMap.get(s.id) || s.name,
+                customersAdded,
+                billsCreatedCount: billsCreated.length,
+                revenueGenerated,
+            };
+        }).sort((a,b) => b.revenueGenerated - a.revenueGenerated);
+    }, [staff, customers, bills, userNameMap]);
+
+    const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', {
+        style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0,
+    }).format(amount);
+
+    if (staff.length === 0) {
+        return (
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100 h-full flex flex-col justify-center items-center">
+                <h2 className="text-xl font-bold mb-2">Staff Performance</h2>
+                <p className="text-gray-500">No staff members have been added yet.</p>
+                <button 
+                    onClick={() => setCurrentPage('STAFF_MANAGEMENT')}
+                    className="mt-4 bg-brand-gold text-brand-charcoal px-4 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition text-sm"
+                >
+                    Manage Staff
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-100 h-full">
+            <h2 className="text-xl font-bold mb-4 flex items-center">
+                <StaffIcon />
+                <span className="ml-2">Staff Performance</span>
+            </h2>
+            <div className="space-y-3 max-h-72 overflow-y-auto">
+                {staffStats.map(stat => (
+                    <div key={stat.id} className="border-b pb-2 last:border-b-0">
+                        <div className="flex justify-between items-center">
+                            <p className="font-semibold">{stat.name}</p>
+                            <p className="font-bold text-brand-charcoal">{formatCurrency(stat.revenueGenerated)}</p>
+                        </div>
+                        <div className="flex items-center gap-x-4 text-xs text-gray-500 mt-1">
+                            <span>Customers: <span className="font-medium text-gray-700">{stat.customersAdded}</span></span>
+                            <span>Bills: <span className="font-medium text-gray-700">{stat.billsCreatedCount}</span></span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurrentPage}) => {
   const { customers, bills } = useDataContext();
@@ -258,14 +317,19 @@ const DashboardPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCur
       </div>
 
       {!isStaff && (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3">
+          <>
+            <div className="grid grid-cols-1">
                 <SalesChart />
             </div>
-            <div className="lg:col-span-2">
-                <RecentTransactions />
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <div className="lg:col-span-3">
+                  <RecentTransactions />
+              </div>
+              <div className="lg:col-span-2">
+                  <StaffPerformance setCurrentPage={setCurrentPage} />
+              </div>
             </div>
-          </div>
+          </>
       )}
     </div>
   );
