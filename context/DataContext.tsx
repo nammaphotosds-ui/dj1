@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { BillType, JewelryCategory } from '../types';
 import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog, BillItem, StaffSyncRequest } from '../types';
@@ -41,6 +41,7 @@ interface DataContextType {
   clearStaffChanges: () => void;
   pendingSyncRequests: StaffSyncRequest[];
   processSyncRequest: (requestId: number, payload: string, action: 'merge' | 'reject') => Promise<{ customersAdded: number; billsAdded: number; }>;
+  refreshPendingSyncRequests: () => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -85,6 +86,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     map.set('admin', adminProfile.name || 'Admin');
     return map;
   }, [staff, adminProfile]);
+
+  const refreshPendingSyncRequests = useCallback(async () => {
+    if (currentUser?.role !== 'admin') {
+      if (pendingSyncRequests.length > 0) setPendingSyncRequests([]);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('staff_sync_requests')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      setPendingSyncRequests(data || []);
+    } catch (e) {
+      console.error('Failed to fetch sync requests:', e);
+      toast.error('Could not fetch pending staff sync requests.');
+    }
+  }, [currentUser?.role, pendingSyncRequests.length]);
 
 
   // Activity Logger
@@ -144,22 +164,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Data Loading Effect
   useEffect(() => {
-    const fetchPendingSyncRequests = async () => {
-        if (currentUser?.role !== 'admin') return;
-        try {
-            const { data, error } = await supabase
-                .from('staff_sync_requests')
-                .select('*')
-                .eq('status', 'pending')
-                .order('created_at', { ascending: true });
-            if (error) throw error;
-            setPendingSyncRequests(data || []);
-        } catch (e) {
-            console.error("Failed to fetch sync requests:", e);
-            toast.error("Could not fetch pending staff sync requests.");
-        }
-    };
-    
     const loadAndSetData = (content: any) => {
         const inventoryData = content.inventory || [];
         const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
@@ -226,7 +230,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setInventory([]); setRawCustomers([]); setBills([]); setStaff([]); setDistributors([]); setActivityLogs([]); setAdminProfile({ name: 'Admin' });
                 localStorage.setItem('appDataCache', JSON.stringify(initialState));
             }
-            fetchPendingSyncRequests();
+            await refreshPendingSyncRequests();
         } catch (e: any) {
             console.error("Google Drive initialization failed", e);
             setError("Failed to connect to Google Drive. The token might be invalid.");
@@ -236,7 +240,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (isAuthInitialized) {
         initData();
     }
-  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser]);
+  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser, refreshPendingSyncRequests]);
 
   const getNextCustomerId = () => {
       const allCustomers = [...rawCustomers, ...staffChanges.customers];
@@ -579,7 +583,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests }}>
       {children}
     </DataContext.Provider>
   );

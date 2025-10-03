@@ -539,6 +539,9 @@ const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> =
                             <h2 className="text-2xl font-bold">{customer.name}</h2>
                             <p className="text-gray-600">{customer.phone}</p>
                             <p className="text-sm font-mono text-gray-500">{customer.id}</p>
+                            <p className="text-xs text-gray-500 mt-1 capitalize">
+                                Created by: <span className="font-semibold">{userNameMap.get(customer.createdBy) || customer.createdBy}</span>
+                            </p>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -565,7 +568,7 @@ const CustomerDetailView: React.FC<{ customer: Customer, onBack: () => void }> =
                                         <div className="flex-1 mb-2 sm:mb-0">
                                             <p className="font-semibold">{bill.type} - {new Date(bill.date).toLocaleDateString()}</p>
                                             <p className="text-xs text-gray-500 font-mono">{bill.id}</p>
-                                            <p className="text-xs text-gray-500">By: {userNameMap.get(bill.createdBy) || bill.createdBy}</p>
+                                            <p className="text-xs text-gray-500 capitalize">Billed by: {userNameMap.get(bill.createdBy) || bill.createdBy}</p>
                                         </div>
                                         <div className="text-right flex flex-col items-end gap-2">
                                             <p className="font-bold">₹{bill.grandTotal.toLocaleString('en-IN')}</p>

@@ -3,7 +3,6 @@ import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
 import SyncDataModal from './settings/SyncDataModal';
-import ManageSyncRequests from './settings/ManageSyncRequests';
 
 const SettingsPage: React.FC = () => {
     const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
@@ -84,8 +83,6 @@ const SettingsPage: React.FC = () => {
                 </button>
                 <SyncDataModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
             </div>
-
-            <ManageSyncRequests />
 
             <div className="hidden md:block bg-white p-6 rounded-lg shadow-md border">
                 <h2 className="text-xl font-bold mb-2">Google Drive Integration</h2>
