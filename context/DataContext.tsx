@@ -374,7 +374,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (amountToApply > 0.01) {
-            toast.warn(`Overpayment of ₹${amountToApply.toFixed(2)} could not be applied as all dues are cleared.`);
+            // FIX: Replaced `toast.warn` with `toast.error` as `warn` is not a valid method.
+            toast.error(`Overpayment of ₹${amountToApply.toFixed(2)} could not be applied as all dues are cleared.`);
         }
         
         const customer = rawCustomers.find(c => c.id === customerId);

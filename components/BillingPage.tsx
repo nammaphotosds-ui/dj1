@@ -418,7 +418,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         });
         
         if (adjustments.length > 0) {
-            toast.warn(adjustments.join('\n'));
+            // FIX: Replaced `toast.warn` with `toast.error` as `warn` is not a valid method.
+            toast.error(adjustments.join('\n'));
             setSelectedItems(updatedItems);
         }
     }
