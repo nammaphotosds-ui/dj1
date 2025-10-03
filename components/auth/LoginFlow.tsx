@@ -79,8 +79,8 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
              <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
              <h2 className="text-3xl font-serif text-brand-charcoal mb-2">Admin Login</h2>
              <p className="text-gray-600 mb-8">Sign in with your Google account to manage the store.</p>
-             <button onClick={handleConnect} disabled={isConnecting} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
-                {isConnecting ? 'Connecting...' : 'Connect with Google'}
+             <button onClick={handleConnect} disabled={isConnecting || !gsiClient} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-70">
+                {isConnecting ? 'Connecting...' : !gsiClient ? 'Initializing Sign-In...' : 'Connect with Google'}
              </button>
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
              <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN Entry</button>
