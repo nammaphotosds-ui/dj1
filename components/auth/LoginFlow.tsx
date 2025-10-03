@@ -34,43 +34,57 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     
     const tokenClient = useRef<any>(null);
 
-    // Initialize the GSI client by polling
+    // Dynamically load the Google Sign-In script
     useEffect(() => {
-        const interval = setInterval(() => {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
             // @ts-ignore
-            if (window.gsiLoaded && window.google) {
-                clearInterval(interval);
-                try {
-                     // @ts-ignore
-                    tokenClient.current = window.google.accounts.oauth2.initTokenClient({
-                        client_id: CLIENT_ID,
-                        scope: 'https://www.googleapis.com/auth/drive.appdata',
-                        callback: (tokenResponse: any) => {
-                            setIsConnecting(false);
-                            if (tokenResponse.error) {
-                                 console.error('Error from Google:', tokenResponse);
-                                 setError(`Failed to connect: ${tokenResponse.error_description || tokenResponse.error}. Please try again.`);
-                                 setTokenResponse(null);
-                                 return;
-                            }
-                            if (tokenResponse.access_token) {
-                                const tokenData = { ...tokenResponse, expires_at: Date.now() + (tokenResponse.expires_in * 1000) };
-                                setTokenResponse(tokenData);
-                                setCurrentUser({ role: 'admin', id: 'admin' });
-                                setError(null);
-                            }
-                        },
-                    });
-                    setIsGsiReady(true);
-                } catch (err) {
-                    console.error("GSI initialization failed:", err);
-                    setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
-                    setIsGsiReady(false);
-                }
+            if (!window.google || !window.google.accounts) {
+                setError("Google Sign-In script loaded, but 'google.accounts' object is not available.");
+                return;
             }
-        }, 100); // Check every 100ms
+            try {
+                // @ts-ignore
+                tokenClient.current = window.google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/drive.appdata',
+                    callback: (tokenResponse: any) => {
+                        setIsConnecting(false);
+                        if (tokenResponse.error) {
+                             console.error('Error from Google:', tokenResponse);
+                             setError(`Failed to connect: ${tokenResponse.error_description || tokenResponse.error}. Please try again.`);
+                             setTokenResponse(null);
+                             return;
+                        }
+                        if (tokenResponse.access_token) {
+                            const tokenData = { ...tokenResponse, expires_at: Date.now() + (tokenResponse.expires_in * 1000) };
+                            setTokenResponse(tokenData);
+                            setCurrentUser({ role: 'admin', id: 'admin' });
+                            setError(null);
+                        }
+                    },
+                });
+                setIsGsiReady(true);
+            } catch (err) {
+                console.error("GSI initialization failed:", err);
+                setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
+                setIsGsiReady(false);
+            }
+        };
+        script.onerror = () => {
+             setError("Failed to load the Google Sign-In script. Please check your internet connection.");
+             setIsGsiReady(false);
+        };
+        
+        document.body.appendChild(script);
 
-        return () => clearInterval(interval); // Cleanup on unmount
+        return () => {
+            // Cleanup: remove the script from the body when the component unmounts
+            document.body.removeChild(script);
+        };
     }, [setTokenResponse, setCurrentUser]);
     
     const handleLoginClick = () => {
