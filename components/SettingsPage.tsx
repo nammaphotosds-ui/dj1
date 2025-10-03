@@ -4,6 +4,70 @@ import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
 import SyncDataModal from './settings/SyncDataModal';
 
+const AdminPinManagement: React.FC = () => {
+    const { updateAdminPin, resetAdminPin } = useAuthContext();
+    const [newPin, setNewPin] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handlePinSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+            toast.error("PIN must be exactly 4 digits.");
+            return;
+        }
+        setIsSaving(true);
+        try {
+            await updateAdminPin(newPin);
+            toast.success("Admin PIN updated successfully.");
+            setNewPin('');
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to update PIN.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleReset = async () => {
+        if (window.confirm("Are you sure you want to reset the admin PIN to the default '4004'?")) {
+            try {
+                await resetAdminPin();
+                toast.success("PIN has been reset to 4004.");
+            } catch (error) {
+                 toast.error(error instanceof Error ? error.message : "Failed to reset PIN.");
+            }
+        }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-md border">
+            <h2 className="text-xl font-bold mb-4">Admin PIN Management</h2>
+            <form onSubmit={handlePinSubmit} className="flex flex-col sm:flex-row items-end gap-4">
+                <div className="flex-grow w-full">
+                    <label htmlFor="newPin" className="block text-sm font-medium text-gray-700">New 4-Digit PIN</label>
+                    <input
+                        type="password"
+                        id="newPin"
+                        value={newPin}
+                        onChange={(e) => setNewPin(e.target.value)}
+                        className="w-full p-2 border rounded mt-1"
+                        maxLength={4}
+                        pattern="\d{4}"
+                        inputMode="numeric"
+                        required
+                    />
+                </div>
+                <button type="submit" disabled={isSaving} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition w-full sm:w-auto disabled:opacity-50">
+                    {isSaving ? 'Saving...' : 'Save New PIN'}
+                </button>
+            </form>
+             <button onClick={handleReset} className="mt-4 text-sm text-blue-600 hover:underline">
+                Reset PIN to 4004
+            </button>
+        </div>
+    );
+};
+
+
 const SettingsPage: React.FC = () => {
     const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
     const { resetTransactions, adminProfile, updateAdminName } = useDataContext();
@@ -74,6 +138,8 @@ const SettingsPage: React.FC = () => {
                     </button>
                 </form>
             </div>
+
+            <AdminPinManagement />
             
             <div className="bg-white p-6 rounded-lg shadow-md border">
                 <h2 className="text-xl font-bold mb-2">Device Sync (Admin to Staff)</h2>
@@ -90,7 +156,7 @@ const SettingsPage: React.FC = () => {
                 
                 <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
                     <div className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 mr-3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 mr-3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         <div>
                             <h3 className="font-bold text-green-800">Successfully Connected to Google Drive!</h3>
                             <p className="text-sm text-green-700">Your data is being stored and synced automatically.</p>

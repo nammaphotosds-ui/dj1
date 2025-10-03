@@ -3,6 +3,7 @@ import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import type { GoogleTokenResponse } from '../../types';
 import Logo from '../common/Logo';
+import PinEntryScreen from './PinEntryScreen';
 
 const CLIENT_ID = "439419338091-qfb0i2fdjhkbgovuo7q28m6eqa5mr8ko.apps.googleusercontent.com";
 
@@ -82,7 +83,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                 {isConnecting ? 'Connecting...' : 'Connect with Google'}
              </button>
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
-             <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to Role Selection</button>
+             <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to PIN Entry</button>
         </div>
     );
 };
@@ -151,11 +152,13 @@ const LoginChooserScreen: React.FC<{
 
 
 const LoginFlow: React.FC<{onSync: () => void}> = ({ onSync }) => {
-    const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
+    const { fetchAdminPin } = useAuthContext();
+    const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff' | 'pin'>('chooser');
     
     const handleSelectRole = (role: 'admin' | 'staff') => {
         if (role === 'admin') {
-            setLoginType('admin');
+            fetchAdminPin(); // Fetch the pin from supabase before showing the screen
+            setLoginType('pin');
         } else {
             setLoginType('staff');
         }
@@ -165,8 +168,10 @@ const LoginFlow: React.FC<{onSync: () => void}> = ({ onSync }) => {
         <>
             {(() => {
                 switch(loginType) {
+                    case 'pin':
+                        return <PinEntryScreen onBack={() => setLoginType('chooser')} onSuccess={() => setLoginType('admin')} />;
                     case 'admin':
-                        return <AdminLoginScreen onBack={() => setLoginType('chooser')} />;
+                        return <AdminLoginScreen onBack={() => setLoginType('pin')} />;
                     case 'staff':
                         return <StaffLoginScreen onBack={() => setLoginType('chooser')} />;
                     case 'chooser':
