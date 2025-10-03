@@ -351,39 +351,67 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
     };
 
-    // Update inventory for both ESTIMATE and INVOICE
+    // Update inventory for all bill types (INVOICE and ESTIMATE). Correctly deducts weight for all items.
     setInventory(prevInventory => {
-        const inventoryMap = new Map<string, JewelryItem>(
-            prevInventory.map(i => [i.id, { ...i }]) // Shallow copy items
-        );
+      const inventoryMap = new Map<string, JewelryItem>(
+          prevInventory.map(i => [i.id, { ...i }])
+      );
+      const newItemsToAdd: JewelryItem[] = [];
 
-        for (const billItem of billData.items) {
-            const inventoryItem = inventoryMap.get(billItem.itemId);
+      for (const billItem of billData.items) {
+          const inventoryItem = inventoryMap.get(billItem.itemId);
 
-            if (inventoryItem) {
-                if (inventoryItem.quantity === 1 && billItem.weight > inventoryItem.weight) {
-                    console.error(`Bill item ${billItem.name} weight (${billItem.weight}) exceeds inventory weight (${inventoryItem.weight}). Skipping inventory update.`);
-                    toast.error(`Inventory issue for ${billItem.name}. Update skipped.`);
-                    continue;
-                }
+          if (!inventoryItem || inventoryItem.quantity < billItem.quantity) {
+              toast.error(`Not enough stock for ${inventoryItem?.name || billItem.name}.`);
+              continue;
+          }
 
-                if (inventoryItem.quantity > 1) {
-                    inventoryItem.quantity = Math.max(0, inventoryItem.quantity - billItem.quantity);
-                } else if (inventoryItem.quantity === 1) {
-                    const remainingWeight = inventoryItem.weight - billItem.weight;
-                    
-                    if (remainingWeight < 0.001) {
-                        inventoryItem.quantity = 0;
-                        inventoryItem.weight = 0;
-                    } else {
-                        inventoryItem.weight = remainingWeight;
-                    }
-                }
-                
-                inventoryMap.set(inventoryItem.id, inventoryItem);
-            }
-        }
-        return Array.from(inventoryMap.values());
+          // Case 1: Selling a single item from a unique stock item (quantity = 1)
+          if (inventoryItem.quantity === 1) {
+              if (billItem.weight > inventoryItem.weight) {
+                  toast.error(`Sell weight for ${inventoryItem.name} exceeds stock weight.`);
+                  continue;
+              }
+              const remainingWeight = inventoryItem.weight - billItem.weight;
+              if (remainingWeight < 0.001) { // Considered fully sold
+                  inventoryItem.quantity = 0;
+                  inventoryItem.weight = 0;
+              } else { // Partially sold, update weight
+                  inventoryItem.weight = remainingWeight;
+              }
+          } 
+          // Case 2: Selling from a multi-quantity stock item
+          else if (inventoryItem.quantity > 1) {
+              // Since UI only allows selling one unit at a time when weight is editable,
+              // we assume billItem.quantity is 1 for partial sales.
+              inventoryItem.quantity = inventoryItem.quantity - billItem.quantity;
+              
+              const weightDifference = inventoryItem.weight - billItem.weight;
+
+              // If a partial weight was sold from one unit, create a remnant.
+              if (billItem.quantity === 1 && weightDifference > 0.001) {
+                  const allCurrentItems = [...Array.from(inventoryMap.values()), ...newItemsToAdd];
+                  const categoryItems = allCurrentItems.filter(i => i.category === inventoryItem.category);
+                  const maxSerial = Math.max(0, ...categoryItems.map(i => {
+                      const serial = parseInt(i.serialNo, 10);
+                      return isNaN(serial) ? 0 : serial;
+                  }));
+                  const newSerialNo = (maxSerial + 1).toString().padStart(5, '0');
+
+                  const remnantItem: JewelryItem = {
+                      ...inventoryItem,
+                      id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                      serialNo: newSerialNo,
+                      name: `${inventoryItem.name} (Remnant)`,
+                      weight: weightDifference,
+                      quantity: 1,
+                  };
+                  newItemsToAdd.push(remnantItem);
+              }
+          }
+          inventoryMap.set(inventoryItem.id, inventoryItem);
+      }
+      return [...Array.from(inventoryMap.values()), ...newItemsToAdd];
     });
 
     if (currentUser.role === 'staff') {
