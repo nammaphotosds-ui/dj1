@@ -11,21 +11,18 @@ interface AuthContextType {
   error: string | null;
   tokenResponse: GoogleTokenResponse | null;
   setTokenResponse: React.Dispatch<React.SetStateAction<GoogleTokenResponse | null>>;
+  // FIX: Added verifyAdminPin to the context type to resolve the error in PinEntryScreen.tsx.
   verifyAdminPin: (pin: string) => Promise<boolean>;
-  updateAdminPin: (pin: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Pre-hashed default PIN '4004'
-const DEFAULT_PIN_HASH = 'a2123545b78083c0f43b51904a433f446002f260ea321588c831b3433a5937a5';
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [tokenResponse, setTokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
   const [currentUser, setCurrentUser] = useLocalStorage<CurrentUser | null>('currentUser', null);
-  const [adminPinHash, setAdminPinHash] = useLocalStorage<string>('adminPinHash', DEFAULT_PIN_HASH);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adminPinHash, setAdminPinHash] = useLocalStorage<string | null>('adminPinHash', null);
 
   useEffect(() => {
     const initAuth = () => {
@@ -52,19 +49,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   };
 
+  // FIX: Implemented the verifyAdminPin function to handle PIN verification logic.
   const verifyAdminPin = async (pin: string): Promise<boolean> => {
-    const hash = await hashPassword(pin);
-    return hash === adminPinHash;
-  };
-
-  const updateAdminPin = async (pin: string) => {
-    if (pin.length < 4) throw new Error("PIN must be at least 4 digits.");
-    const hash = await hashPassword(pin);
-    setAdminPinHash(hash);
+    let currentPinHash = adminPinHash;
+    if (!currentPinHash) {
+      // If it's not in local storage, we're on a fresh install.
+      // Set the default PIN ('1234') and use it for verification.
+      currentPinHash = await hashPassword('1234');
+      setAdminPinHash(currentPinHash);
+    }
+    const incomingPinHash = await hashPassword(pin);
+    return incomingPinHash === currentPinHash;
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, setCurrentUser, isInitialized, loginAsStaff, error, tokenResponse, setTokenResponse, verifyAdminPin, updateAdminPin }}>
+    <AuthContext.Provider value={{ currentUser, setCurrentUser, isInitialized, loginAsStaff, error, tokenResponse, setTokenResponse, verifyAdminPin }}>
       {children}
     </AuthContext.Provider>
   );

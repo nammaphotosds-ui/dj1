@@ -42,6 +42,8 @@ interface DataContextType {
   pendingSyncRequests: StaffSyncRequest[];
   processSyncRequest: (requestId: number, payload: string, action: 'merge' | 'reject') => Promise<{ customersAdded: number; billsAdded: number; }>;
   refreshPendingSyncRequests: () => Promise<void>;
+  // FIX: Added mergeStaffData to the context type to make it available to components.
+  mergeStaffData: (payload: string) => Promise<{ customersAdded: number; billsAdded: number; }>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -583,7 +585,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData }}>
       {children}
     </DataContext.Provider>
   );
