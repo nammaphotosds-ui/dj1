@@ -2,38 +2,62 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../../context/DataContext';
 import Modal from '../common/Modal';
+import { supabase } from '../../utils/supabase';
+
+// Helper function to generate a random code
+const generateRandomCode = (length = 6) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+};
 
 const SyncDataModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const { getSyncDataPayload } = useDataContext();
-    const [syncData, setSyncData] = useState<string | null>(null);
+    const [syncCode, setSyncCode] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [showData, setShowData] = useState(false);
 
-    // Reset internal state when the modal is closed to ensure it's fresh on reopen.
     useEffect(() => {
         if (!isOpen) {
-            // Add a small delay to prevent visual glitch during closing animation
             const timer = setTimeout(() => {
-                setSyncData(null);
+                setSyncCode(null);
                 setIsLoading(false);
                 setError('');
-                setShowData(false);
             }, 300);
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
 
-    const generateSyncData = () => {
+    const generateSyncSession = async () => {
         setIsLoading(true);
         setError('');
-        setSyncData(null);
-        setShowData(false); // Hide previous data when generating new data
+        setSyncCode(null);
+
         try {
             const payload = getSyncDataPayload();
             if (!payload) throw new Error("Could not generate data payload.");
-            setSyncData(payload);
-            toast.success("Sync data generated successfully!");
+            
+            const code = generateRandomCode();
+            const expiration = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
+            const { error: insertError } = await supabase
+                .from('sync_sessions')
+                .insert({
+                    sync_code: code,
+                    data_payload: payload,
+                    expires_at: expiration.toISOString(),
+                });
+
+            if (insertError) {
+                console.error("Supabase insert error:", insertError);
+                throw new Error("Could not create sync session. Please check your Supabase setup and connection.");
+            }
+
+            setSyncCode(code);
+            toast.success("Sync code generated! It expires in 15 minutes.");
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
             setError(errorMessage);
@@ -44,56 +68,41 @@ const SyncDataModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
     };
     
     const handleCopy = () => {
-        if (syncData) {
-            navigator.clipboard.writeText(syncData);
-            localStorage.setItem('lastSyncDataPayload', syncData);
-            toast.success("Data copied & saved locally!");
+        if (syncCode) {
+            navigator.clipboard.writeText(syncCode);
+            toast.success("Code copied to clipboard!");
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Generate Device Sync Data">
+        <Modal isOpen={isOpen} onClose={onClose} title="Generate Device Sync Code">
             <div className="text-center">
                 <p className="text-gray-600 mb-4">
-                    Generate an encrypted data string to set up a new staff device. This string contains all necessary application data.
+                    Generate a short, temporary code to set up a new staff device. This action uploads the current data snapshot.
                 </p>
                 <div className="p-4 bg-gray-100 rounded-lg my-4 min-h-[12rem] flex items-center justify-center">
                     {isLoading ? (
-                        <p className="text-gray-500">Generating data...</p>
+                        <p className="text-gray-500">Generating code...</p>
                     ) : error ? (
                         <p className="text-red-500">{error}</p>
-                    ) : syncData ? (
+                    ) : syncCode ? (
                         <div className="w-full text-center">
-                            {showData ? (
-                                <div className="w-full text-left">
-                                   <p className="text-sm text-gray-600 mb-2">Copy this entire block of text and send it to the staff member.</p>
-                                   <textarea 
-                                        readOnly 
-                                        value={syncData}
-                                        className="w-full p-2 border rounded bg-gray-50 text-xs h-32"
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                    <button onClick={handleCopy} className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                                        Copy Data
-                                    </button>
-                                </div>
-                            ) : (
-                                <div>
-                                    <p className="text-green-700 font-semibold mb-4">Sync data has been generated successfully.</p>
-                                    <button onClick={() => setShowData(true)} className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition">
-                                        View Data
-                                    </button>
-                                </div>
-                            )}
+                           <p className="text-sm text-gray-600 mb-2">Share this code with the staff member:</p>
+                           <div className="my-4 p-3 bg-white border-2 border-dashed rounded-lg">
+                               <p className="text-4xl font-bold font-mono tracking-widest text-brand-charcoal">{syncCode}</p>
+                           </div>
+                            <button onClick={handleCopy} className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+                                Copy Code
+                            </button>
                         </div>
                     ) : (
-                        <button onClick={generateSyncData} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
-                            Generate Data
+                        <button onClick={generateSyncSession} className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
+                            Generate Code
                         </button>
                     )}
                 </div>
                  <p className="text-xs text-gray-500 mt-6">
-                    <strong>Note:</strong> This is a snapshot of the current data. It should only be shared with trusted staff.
+                    <strong>Note:</strong> The sync code is valid for 15 minutes and should only be used once.
                 </p>
             </div>
         </Modal>

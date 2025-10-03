@@ -3,7 +3,6 @@ import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import type { GoogleTokenResponse } from '../../types';
 import Logo from '../common/Logo';
-import ViewStoredDataModal from '../common/ViewStoredDataModal';
 
 const CLIENT_ID = "439419338091-qfb0i2fdjhkbgovuo7q28m6eqa5mr8ko.apps.googleusercontent.com";
 
@@ -127,14 +126,11 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
 const LoginChooserScreen: React.FC<{ 
     onSelectRole: (role: 'admin' | 'staff') => void;
     onSync: () => void;
-    onLogoDoubleClick: () => void;
-}> = ({ onSelectRole, onSync, onLogoDoubleClick }) => {
+}> = ({ onSelectRole, onSync }) => {
      return (
         <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
             <div 
-                className="flex flex-col items-center text-center mb-16 cursor-pointer"
-                onDoubleClick={onLogoDoubleClick}
-                title="Double-tap to view last saved sync data"
+                className="flex flex-col items-center text-center mb-16"
             >
                 <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-40 h-40 object-contain mb-6"/>
                 <h1 className="text-5xl font-serif tracking-wider">DEVAGIRIKAR</h1>
@@ -156,7 +152,6 @@ const LoginChooserScreen: React.FC<{
 
 const LoginFlow: React.FC<{onSync: () => void}> = ({ onSync }) => {
     const [loginType, setLoginType] = useState<'chooser' | 'admin' | 'staff'>('chooser');
-    const [isViewDataModalOpen, setIsViewDataModalOpen] = useState(false);
     
     return (
         <>
@@ -171,14 +166,9 @@ const LoginFlow: React.FC<{onSync: () => void}> = ({ onSync }) => {
                          return <LoginChooserScreen 
                                     onSelectRole={setLoginType} 
                                     onSync={onSync} 
-                                    onLogoDoubleClick={() => setIsViewDataModalOpen(true)}
                                 />;
                 }
             })()}
-            <ViewStoredDataModal 
-                isOpen={isViewDataModalOpen} 
-                onClose={() => setIsViewDataModalOpen(false)}
-            />
         </>
     )
 }
