@@ -20,6 +20,7 @@ interface DataContextType {
   userNameMap: Map<string, string>;
   updateAdminName: (name: string) => Promise<void>;
   addInventoryItem: (item: Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>) => Promise<void>;
+  updateInventoryItem: (itemId: string, updates: Partial<Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>>) => Promise<void>;
   deleteInventoryItem: (itemId: string) => Promise<void>;
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate' | 'createdBy' | 'pendingBalance'>) => Promise<void>;
   deleteCustomer: (customerId: string) => Promise<void>;
@@ -41,6 +42,7 @@ interface DataContextType {
   clearStaffChanges: () => void;
   pendingSyncRequests: StaffSyncRequest[];
   processSyncRequest: (requestId: number, payload: string, action: 'merge' | 'reject') => Promise<{ customersAdded: number; billsAdded: number; }>;
+  // FIX: Added refreshPendingSyncRequests to context type to resolve usage errors.
   refreshPendingSyncRequests: () => Promise<void>;
   // FIX: Added mergeStaffData to the context type to make it available to components.
   mergeStaffData: (payload: string) => Promise<{ customersAdded: number; billsAdded: number; }>;
@@ -266,6 +268,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     setInventory(prev => [...prev, newItem]);
     logActivity(`Added inventory item: ${newItem.name} (S/N: ${newItem.serialNo})`);
+  };
+
+  const updateInventoryItem = async (itemId: string, updates: Partial<Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>>) => {
+    if (currentUser?.role !== 'admin') throw new Error("Permission denied");
+
+    setInventory(prev =>
+      prev.map(item => {
+        if (item.id === itemId) {
+          const updatedItem = { ...item, ...updates };
+          logActivity(`Updated inventory item: ${updatedItem.name} (S/N: ${updatedItem.serialNo}).`);
+          return updatedItem;
+        }
+        return item;
+      })
+    );
   };
   
   const deleteInventoryItem = async (itemId: string) => {
@@ -607,7 +624,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData }}>
       {children}
     </DataContext.Provider>
   );

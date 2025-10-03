@@ -5,6 +5,7 @@ import { JewelryCategory } from '../types';
 import type { JewelryItem } from '../types';
 import Modal from './common/Modal';
 import AddInventoryItemForm from './forms/AddInventoryItemForm';
+import EditInventoryItemForm from './forms/EditInventoryItemForm';
 import { WeightIcon } from './common/Icons';
 
 
@@ -18,7 +19,7 @@ const InventoryStatCard: React.FC<{ title: string; value: string | number; icon:
     </div>
 );
 
-const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string, itemName: string) => void; }> = ({ item, onDelete }) => {
+const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string, itemName: string) => void; onEdit: (item: JewelryItem) => void; }> = ({ item, onDelete, onEdit }) => {
     return (
         <div className="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between transition-shadow hover:shadow-md">
             <div className="flex-grow mr-4">
@@ -35,6 +36,13 @@ const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string
                     {item.quantity > 0 ? 'In Stock' : 'Sold Out'}
                  </span>
                  <button 
+                    onClick={() => onEdit(item)} 
+                    className="text-blue-500 rounded-full p-1.5 hover:bg-blue-100"
+                    aria-label={`Edit ${item.name}`}
+                 >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                 <button 
                     onClick={() => onDelete(item.id, item.name)} 
                     className="text-red-500 rounded-full p-1.5 hover:bg-red-100"
                     aria-label={`Delete ${item.name}`}
@@ -49,7 +57,8 @@ const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string
 const InventoryPage: React.FC = () => {
     const { inventory, deleteInventoryItem } = useDataContext();
     const { initialInventoryFilter, setInitialInventoryFilter } = useUIContext();
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<JewelryItem | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>(JewelryCategory.GOLD);
 
     useEffect(() => {
@@ -102,18 +111,22 @@ const InventoryPage: React.FC = () => {
                     </button>
                 ))}
             </div>
-             <button onClick={() => setIsModalOpen(true)} className="hidden md:flex bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition items-center shadow-md whitespace-nowrap">
+             <button onClick={() => setIsAddModalOpen(true)} className="hidden md:flex bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition items-center shadow-md whitespace-nowrap">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                 Add New Item
             </button>
         </div>
         
-        <button onClick={() => setIsModalOpen(true)} className="md:hidden fixed bottom-24 right-6 bg-brand-gold text-brand-charcoal w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-20">
+        <button onClick={() => setIsAddModalOpen(true)} className="md:hidden fixed bottom-24 right-6 bg-brand-gold text-brand-charcoal w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-20">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
 
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Inventory Item">
-            <AddInventoryItemForm onClose={() => setIsModalOpen(false)} />
+        <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Inventory Item">
+            <AddInventoryItemForm onClose={() => setIsAddModalOpen(false)} />
+        </Modal>
+
+        <Modal isOpen={!!editingItem} onClose={() => setEditingItem(null)} title="Edit Inventory Item">
+            {editingItem && <EditInventoryItemForm item={editingItem} onClose={() => setEditingItem(null)} />}
         </Modal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -125,7 +138,12 @@ const InventoryPage: React.FC = () => {
         <div className="space-y-3">
             {filteredInventory.length > 0 ? (
                 filteredInventory.map(item => (
-                    <InventoryListItem key={item.id} item={item} onDelete={handleDelete} />
+                    <InventoryListItem 
+                        key={item.id} 
+                        item={item} 
+                        onDelete={handleDelete}
+                        onEdit={(itemToEdit) => setEditingItem(itemToEdit)}
+                    />
                 ))
             ) : (
                 <div className="text-center py-16 bg-white rounded-lg shadow-md col-span-full">
