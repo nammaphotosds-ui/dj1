@@ -30,9 +30,11 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const { setCurrentUser, setTokenResponse } = useAuthContext();
     const [error, setError] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [isReady, setIsReady] = useState(false);
-    const googleButtonRef = useRef<HTMLDivElement>(null);
+    const [isGsiReady, setIsGsiReady] = useState(false);
+    
+    const tokenClient = useRef<any>(null);
 
+    // Initialize the GSI client
     useEffect(() => {
         const initializeGsi = async () => {
             try {
@@ -42,8 +44,7 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                     throw new Error("Google Identity Services library failed to load.");
                 }
 
-                // This is the OAuth2 token client. It's responsible for getting the access token for Drive.
-                const tokenClient = google.accounts.oauth2.initTokenClient({
+                tokenClient.current = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID,
                     scope: 'https://www.googleapis.com/auth/drive.appdata',
                     callback: (tokenResponse: any) => {
@@ -55,7 +56,6 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                              return;
                         }
                         if (tokenResponse.access_token) {
-                            console.log('Received Access Token via GSI.');
                             const tokenData = { ...tokenResponse, expires_at: Date.now() + (tokenResponse.expires_in * 1000) };
                             setTokenResponse(tokenData);
                             setCurrentUser({ role: 'admin', id: 'admin' });
@@ -63,55 +63,43 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                         }
                     },
                 });
-
-                // This initializes the "Sign In with Google" button.
-                // Its callback will trigger the token client.
-                google.accounts.id.initialize({
-                    client_id: CLIENT_ID,
-                    callback: () => {
-                        // This callback fires after a successful sign-in from the button.
-                        // We use it as the user-initiated gesture to request the access token for Drive.
-                        setIsConnecting(true);
-                        setError(null);
-                        tokenClient.requestAccessToken({prompt: ''}); // prompt:'' prevents account chooser if already signed in.
-                    },
-                });
-
-                // Render the button into our ref container.
-                if (googleButtonRef.current) {
-                    google.accounts.id.renderButton(
-                        googleButtonRef.current,
-                        { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with' }
-                    );
-                    google.accounts.id.prompt(); // Display the One Tap prompt for returning users.
-                    setIsReady(true);
-                } else {
-                    console.warn("Google button ref was not available for rendering.");
-                }
-
+                setIsGsiReady(true);
             } catch (err) {
                 console.error("GSI initialization failed:", err);
                 setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
-                setIsReady(false);
+                setIsGsiReady(false);
             }
         };
 
         initializeGsi();
     }, [setTokenResponse, setCurrentUser]);
     
+    const handleLoginClick = () => {
+        if (!tokenClient.current) {
+            setError("Google Sign-In is not ready yet.");
+            return;
+        }
+        setIsConnecting(true);
+        setError(null);
+        // This MUST be called from a user-initiated event like a click.
+        tokenClient.current.requestAccessToken({ prompt: '' });
+    };
+
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
              <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
              <h2 className="text-3xl font-serif text-brand-charcoal mb-2">Admin Login</h2>
              <p className="text-gray-600 mb-6">Sign in with your Google account to manage the store.</p>
 
-             <div className="flex flex-col items-center justify-center min-h-[50px]">
-                {isReady ? (
-                    <div ref={googleButtonRef} className={isConnecting ? 'opacity-50 pointer-events-none' : ''}></div>
-                ) : (
-                    <p className="text-gray-500">Initializing Sign-In...</p>
-                )}
-                {isConnecting && <p className="text-gray-500 mt-2">Connecting...</p>}
+             <div className="w-full max-w-xs">
+                <button 
+                    onClick={handleLoginClick} 
+                    disabled={!isGsiReady || isConnecting}
+                    className="w-full flex items-center justify-center gap-3 p-3 bg-white border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                    <svg className="w-6 h-6" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.42-4.55H24v8.51h13.04c-.57 3.32-2.31 6.17-4.79 7.99l7.98 6.19C45.27 38.91 48 32.16 48 24c0-.73-.07-1.44-.19-2.13l-1.01-1.32z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.98-6.19c-2.17 1.45-4.92 2.3-8.02 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
+                    <span>{isConnecting ? 'Connecting...' : (isGsiReady ? 'Sign in with Google' : 'Initializing...')}</span>
+                </button>
              </div>
              
              {error && <p className="text-red-600 mt-4 text-sm">{error}</p>}
