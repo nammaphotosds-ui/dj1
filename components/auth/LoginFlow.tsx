@@ -34,44 +34,43 @@ const AdminLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     
     const tokenClient = useRef<any>(null);
 
-    // Initialize the GSI client
+    // Initialize the GSI client by polling
     useEffect(() => {
-        const initializeGsi = async () => {
-            try {
-                // @ts-ignore
-                const google = await window.gsiClientPromise;
-                if (!google) {
-                    throw new Error("Google Identity Services library failed to load.");
+        const interval = setInterval(() => {
+            // @ts-ignore
+            if (window.gsiLoaded && window.google) {
+                clearInterval(interval);
+                try {
+                     // @ts-ignore
+                    tokenClient.current = window.google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: 'https://www.googleapis.com/auth/drive.appdata',
+                        callback: (tokenResponse: any) => {
+                            setIsConnecting(false);
+                            if (tokenResponse.error) {
+                                 console.error('Error from Google:', tokenResponse);
+                                 setError(`Failed to connect: ${tokenResponse.error_description || tokenResponse.error}. Please try again.`);
+                                 setTokenResponse(null);
+                                 return;
+                            }
+                            if (tokenResponse.access_token) {
+                                const tokenData = { ...tokenResponse, expires_at: Date.now() + (tokenResponse.expires_in * 1000) };
+                                setTokenResponse(tokenData);
+                                setCurrentUser({ role: 'admin', id: 'admin' });
+                                setError(null);
+                            }
+                        },
+                    });
+                    setIsGsiReady(true);
+                } catch (err) {
+                    console.error("GSI initialization failed:", err);
+                    setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
+                    setIsGsiReady(false);
                 }
-
-                tokenClient.current = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: 'https://www.googleapis.com/auth/drive.appdata',
-                    callback: (tokenResponse: any) => {
-                        setIsConnecting(false);
-                        if (tokenResponse.error) {
-                             console.error('Error from Google:', tokenResponse);
-                             setError(`Failed to connect: ${tokenResponse.error_description || tokenResponse.error}. Please try again.`);
-                             setTokenResponse(null);
-                             return;
-                        }
-                        if (tokenResponse.access_token) {
-                            const tokenData = { ...tokenResponse, expires_at: Date.now() + (tokenResponse.expires_in * 1000) };
-                            setTokenResponse(tokenData);
-                            setCurrentUser({ role: 'admin', id: 'admin' });
-                            setError(null);
-                        }
-                    },
-                });
-                setIsGsiReady(true);
-            } catch (err) {
-                console.error("GSI initialization failed:", err);
-                setError("Could not initialize Google Sign-In. Please check your internet connection and try refreshing.");
-                setIsGsiReady(false);
             }
-        };
+        }, 100); // Check every 100ms
 
-        initializeGsi();
+        return () => clearInterval(interval); // Cleanup on unmount
     }, [setTokenResponse, setCurrentUser]);
     
     const handleLoginClick = () => {
