@@ -5,9 +5,10 @@ import { useAuthContext } from '../context/AuthContext';
 import SyncDataModal from './settings/SyncDataModal';
 
 const SettingsPage: React.FC = () => {
-    const { tokenResponse, setCurrentUser, setTokenResponse } = useAuthContext();
+    const { tokenResponse, setCurrentUser, setTokenResponse, updateAdminPin } = useAuthContext();
     const { resetTransactions, adminProfile, updateAdminName } = useDataContext();
     const [adminName, setAdminName] = useState(adminProfile.name);
+    const [newPin, setNewPin] = useState('');
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
     useEffect(() => {
@@ -25,6 +26,22 @@ const SettingsPage: React.FC = () => {
             toast.success("Admin name updated successfully.");
         } catch (error) {
             toast.error("Failed to update admin name.");
+        }
+    };
+
+    const handlePinSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPin.length < 4) {
+            toast.error("PIN must be at least 4 digits long.");
+            return;
+        }
+        try {
+            await updateAdminPin(newPin);
+            toast.success("Admin PIN updated successfully.");
+            setNewPin('');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast.error(`Failed to update PIN: ${message}`);
         }
     };
 
@@ -71,6 +88,28 @@ const SettingsPage: React.FC = () => {
                     </div>
                     <button type="submit" className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
                         Save
+                    </button>
+                </form>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md border">
+                <h2 className="text-xl font-bold mb-4">Admin PIN Management</h2>
+                <form onSubmit={handlePinSubmit} className="flex items-end gap-4">
+                    <div className="flex-grow">
+                        <label htmlFor="adminPin" className="block text-sm font-medium text-gray-700">New PIN</label>
+                        <input
+                            type="password"
+                            id="adminPin"
+                            inputMode="numeric"
+                            value={newPin}
+                            onChange={(e) => setNewPin(e.target.value)}
+                            className="w-full p-2 border rounded mt-1"
+                            placeholder="Enter new 4+ digit PIN"
+                            required
+                        />
+                    </div>
+                    <button type="submit" className="bg-brand-gold text-brand-charcoal px-6 py-2 rounded-lg font-semibold hover:bg-brand-gold-dark transition">
+                        Save New PIN
                     </button>
                 </form>
             </div>
