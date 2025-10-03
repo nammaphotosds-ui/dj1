@@ -15,7 +15,6 @@ const EditInventoryItemForm: React.FC<EditInventoryItemFormProps> = ({ item, onC
     const [distributorId, setDistributorId] = useState(item.distributorId);
     const [weight, setWeight] = useState(item.weight.toString());
     const [purity, setPurity] = useState(item.purity.toString());
-    const [quantity, setQuantity] = useState(item.quantity.toString());
     const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
     useEffect(() => {
@@ -42,7 +41,6 @@ const EditInventoryItemForm: React.FC<EditInventoryItemFormProps> = ({ item, onC
                 distributorId,
                 weight: parseFloat(weight),
                 purity: category === JewelryCategory.GOLD ? parseFloat(purity) : 0,
-                quantity: parseInt(quantity, 10),
             });
 
             toast.dismiss(savingToast);
@@ -78,7 +76,6 @@ const EditInventoryItemForm: React.FC<EditInventoryItemFormProps> = ({ item, onC
                     <input type="number" step="0.1" placeholder="Purity (carat)" value={purity} onChange={e => setPurity(e.target.value)} className="w-full p-2 border rounded" required/>
                 )}
             </div>
-            <input type="number" placeholder="Quantity" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full p-2 border rounded" required min="0"/>
             <button
                 type="submit"
                 disabled={submissionStatus !== 'idle'}

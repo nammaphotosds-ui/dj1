@@ -96,7 +96,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     <th className={`font-semibold text-left tracking-wider uppercase text-brand-charcoal w-[45%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Item Name</th>
                                     <th className={`font-semibold text-left tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Item ID</th>
                                     <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[10%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Weight (g)</th>
-                                    <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Rate (₹)</th>
+                                    <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Rate/g (₹)</th>
                                     <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Amount (₹)</th>
                                 </tr>
                             </thead>
@@ -104,6 +104,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                 {bill.items.map((item: BillItem) => {
                                     const quantity = item.quantity || 1;
                                     const amount = item.price * quantity;
+                                    const ratePerGram = item.weight > 0 ? item.price / item.weight : 0;
                                     return (
                                         <tr key={item.itemId} className="border-b border-brand-gold-dark/20">
                                             <td className={`font-medium border border-brand-gold-dark/30 ${tableCellClasses}`} style={{ wordBreak: 'break-word' }}>
@@ -112,7 +113,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                             </td>
                                             <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.serialNo}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(3)}</td>
-                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.price.toLocaleString('en-IN')}</td>
+                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{ratePerGram.toLocaleString('en-IN')}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{amount.toLocaleString('en-IN')}</td>
                                         </tr>
                                     );
@@ -435,10 +436,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
 
         if (!inventoryItem) return prevItems;
         
-        if (inventoryItem.quantity > 1) {
-             return prevItems;
-        }
-
         let finalWeight = weight;
         if (weight > inventoryItem.weight) {
             toast.error(`Sell weight cannot exceed stock weight of ${inventoryItem.weight}g.`, { duration: 2000 });
@@ -457,31 +454,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
             weight: finalWeight,
             price: newPrice,
             quantity: 1, 
-        };
-        
-        return newItems;
-    });
-  };
-  
-  const handleItemQuantityChange = (index: number, newQuantityStr: string) => {
-    const newQuantity = parseInt(newQuantityStr, 10);
-    const quantity = isNaN(newQuantity) || newQuantity < 1 ? 1 : newQuantity;
-    
-    setSelectedItems(prevItems => {
-        const newItems = [...prevItems];
-        const itemToUpdate = newItems[index];
-        const inventoryItem = inventory.find(i => i.id === itemToUpdate.itemId);
-        if (!inventoryItem) return prevItems;
-
-        let finalQuantity = quantity;
-        if (quantity > inventoryItem.quantity) {
-            toast.error(`Cannot sell more than the available quantity of ${inventoryItem.quantity}.`);
-            finalQuantity = inventoryItem.quantity;
-        }
-
-        newItems[index] = {
-            ...itemToUpdate,
-            quantity: finalQuantity
         };
         
         return newItems;
@@ -729,19 +701,13 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
             <div className="mt-4 max-h-72 overflow-y-auto pr-2">
                  {selectedItems.map((item, index) => {
                      const inventoryItem = inventory.find(i => i.id === item.itemId);
-                     const canDoPartialSale = inventoryItem && inventoryItem.quantity === 1;
-
                      return (
                         <div key={item.itemId} className="bg-gray-50 p-3 rounded mb-2 border">
                             <div className="flex justify-between items-start">
                                 <div>
                                     <p className="font-semibold">{item.name}</p>
                                     <p className="text-xs text-gray-500">
-                                        S/N: {item.serialNo} | Stock: {
-                                            canDoPartialSale 
-                                            ? `${inventoryItem?.weight.toFixed(3)}g` 
-                                            : `${inventoryItem?.quantity} units @ ${inventoryItem?.weight.toFixed(3)}g`
-                                        }
+                                        S/N: {item.serialNo} | Stock: {inventoryItem?.weight.toFixed(3)}g
                                     </p>
                                 </div>
                                 <button type="button" onClick={() => handleRemoveItem(item.itemId)} className="text-red-500 hover:text-red-700 font-bold text-xl leading-none -mt-1 -mr-1">&times;</button>
@@ -749,22 +715,16 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                             <div className="mt-2 grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-medium text-gray-600">
-                                        {canDoPartialSale ? 'Sell Weight (g)' : 'Quantity'}
+                                        Sell Weight (g)
                                     </label>
                                     <input
                                         type="number"
-                                        value={canDoPartialSale ? (item.weight === 0 ? '' : item.weight) : item.quantity}
-                                        onChange={(e) => {
-                                            if (canDoPartialSale) {
-                                                handleItemWeightChange(index, e.target.value);
-                                            } else {
-                                                handleItemQuantityChange(index, e.target.value);
-                                            }
-                                        }}
+                                        value={item.weight === 0 ? '' : item.weight}
+                                        onChange={(e) => handleItemWeightChange(index, e.target.value)}
                                         className="w-full p-1.5 border rounded"
-                                        step={canDoPartialSale ? "0.001" : "1"}
-                                        min={canDoPartialSale ? "0" : "1"}
-                                        max={canDoPartialSale ? inventoryItem?.weight : inventoryItem?.quantity}
+                                        step="0.001"
+                                        min="0"
+                                        max={inventoryItem?.weight}
                                     />
                                 </div>
                                 <div>
