@@ -93,10 +93,9 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                         <table className={`w-full border-collapse border border-brand-gold-dark/30 ${tableBaseFontSize}`} style={{ tableLayout: 'fixed' }}>
                             <thead className="border-b-2 border-brand-charcoal bg-brand-pale-gold/30">
                                 <tr>
-                                    <th className={`font-semibold text-left tracking-wider uppercase text-brand-charcoal w-[35%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Item Name</th>
+                                    <th className={`font-semibold text-left tracking-wider uppercase text-brand-charcoal w-[45%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Item Name</th>
                                     <th className={`font-semibold text-left tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Item ID</th>
                                     <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[10%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Weight (g)</th>
-                                    <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[10%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Qty</th>
                                     <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Rate (₹)</th>
                                     <th className={`font-semibold text-right tracking-wider uppercase text-brand-charcoal w-[15%] border border-brand-gold-dark/30 ${tableCellClasses}`}>Amount (₹)</th>
                                 </tr>
@@ -113,7 +112,6 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                             </td>
                                             <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.serialNo}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(3)}</td>
-                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{quantity}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.price.toLocaleString('en-IN')}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{amount.toLocaleString('en-IN')}</td>
                                         </tr>
@@ -377,7 +375,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
       category: item.category, 
       weight: item.weight, 
       price: price,
-      quantity: 0
+      quantity: 1
     }]);
   };
 
@@ -418,31 +416,10 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         });
         
         if (adjustments.length > 0) {
-            // FIX: Replaced `toast.warn` with `toast.error` as `warn` is not a valid method.
             toast.error(adjustments.join('\n'));
             setSelectedItems(updatedItems);
         }
     }
-  };
-  
-  const handleQuantityChange = (itemId: string, newQuantityStr: string) => {
-    const newQuantity = parseInt(newQuantityStr, 10);
-    const inventoryItem = inventory.find(i => i.id === itemId);
-
-    if (!inventoryItem) return;
-
-    if (isNaN(newQuantity) || newQuantity < 0) {
-        setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: 0 } : item));
-        return;
-    }
-    
-    if (billType === BillType.INVOICE && newQuantity > inventoryItem.quantity) {
-        toast.error(`Cannot add more than available stock (${inventoryItem.quantity}). Adjusting quantity to max available.`);
-        setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: inventoryItem.quantity } : item));
-        return;
-    }
-
-    setSelectedItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: newQuantity } : item));
   };
   
     const generatePdfBlob = (componentToRender: React.ReactElement): Promise<Blob | null> => {
@@ -693,7 +670,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                             </div>
                             <button type="button" onClick={() => handleRemoveItem(item.itemId)} className="text-red-500 hover:text-red-700 font-bold text-xl leading-none -mt-1 -mr-1">&times;</button>
                         </div>
-                        <div className="mt-2 grid grid-cols-2 gap-4">
+                        <div className="mt-2">
                             <div>
                                 <label htmlFor={`price-${item.itemId}`} className="text-xs font-medium text-gray-600">Price (₹)</label>
                                 <input
@@ -704,10 +681,6 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                                     placeholder="Auto-calculated"
                                     readOnly
                                 />
-                            </div>
-                            <div>
-                                <label htmlFor={`qty-${item.itemId}`} className="text-xs font-medium text-gray-600">Quantity</label>
-                                <input id={`qty-${item.itemId}`} type="number" value={item.quantity === 0 ? '' : item.quantity} onChange={e => handleQuantityChange(item.itemId, e.target.value)} className="w-full p-1.5 border rounded" placeholder="Qty" step="1" required onFocus={e => e.target.select()} />
                             </div>
                         </div>
                     </div>
@@ -789,5 +762,4 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   );
 };
 
-// FIX: Add default export to resolve import error
 export default BillingPage;
