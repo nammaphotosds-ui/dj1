@@ -15,10 +15,10 @@ export const WelcomeScreen: React.FC = () => (
             loop
             style={{ width: '300px', height: '300px', margin: '0 auto' }}
         ></dotlottie-wc>
-        <h1 className="text-5xl font-serif tracking-wider text-brand-charcoal -mt-8" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.1)' }}>
+        <h1 className="text-5xl font-serif tracking-wider text-white md:text-brand-charcoal -mt-8" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.1)' }}>
           DEVAGIRIKAR
         </h1>
-        <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
+        <p className="text-2xl text-brand-gold-light md:text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
       </div>
     </div>
 );
@@ -49,7 +49,7 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
             <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
-            <h2 className="text-3xl font-serif text-brand-charcoal mb-2">Staff Login</h2>
+            <h2 className="text-3xl font-serif text-white md:text-brand-charcoal mb-2">Staff Login</h2>
             <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
                 <input type="text" value={staffId} onChange={e => setStaffId(e.target.value)} placeholder="Staff ID" className="w-full p-3 border rounded" required disabled={isLoginDisabled} />
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full p-3 border rounded" required disabled={isLoginDisabled} />
@@ -58,7 +58,7 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
                 </button>
                 {error && <p className="text-red-600 text-sm">{error}</p>}
             </form>
-            <button onClick={onBack} className="mt-8 text-gray-600 text-sm">Back to Role Selection</button>
+            <button onClick={onBack} className="mt-8 text-gray-300 md:text-gray-600 text-sm">Back to Role Selection</button>
         </div>
     );
 };
@@ -68,13 +68,13 @@ const LoginChooserScreen: React.FC<{
     isLoadingAdmin: boolean;
 }> = ({ onSelectRole, isLoadingAdmin }) => {
      return (
-        <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
+        <div className="flex h-full w-full flex-col items-center justify-center p-8 text-white md:text-brand-charcoal">
             <div 
                 className="flex flex-col items-center text-center mb-16"
             >
                 <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-40 h-40 object-contain mb-6"/>
                 <h1 className="text-5xl font-serif tracking-wider">DEVAGIRIKAR</h1>
-                <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
+                <p className="text-2xl text-brand-gold-light md:text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
             </div>
             <div className="flex flex-col gap-4 w-full max-w-xs">
                 <button 

@@ -38,7 +38,7 @@ const AppContent: React.FC = () => {
 
   if (!isInitialized) {
       return (
-        <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+        <div className="h-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg">
           <WelcomeScreen />
         </div>
       );
@@ -46,7 +46,7 @@ const AppContent: React.FC = () => {
   
   if (error) {
       return (
-           <div className="h-full w-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg flex items-center justify-center p-4">
+           <div className="h-full w-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg flex items-center justify-center p-4">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
                 <h1 className="text-2xl font-bold text-red-700 mb-4">An Error Occurred</h1>
                 <p className="text-red-600 mb-6">{error}</p>
@@ -58,7 +58,7 @@ const AppContent: React.FC = () => {
 
   if (!currentUser) {
       return (
-        <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+        <div className="h-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg">
             <LoginFlow />
         </div>
       );
@@ -95,7 +95,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
+    <div className="h-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg">
       <Toaster position="top-center" reverseOrder={false} />
       
       <Sidebar 
