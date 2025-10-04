@@ -180,16 +180,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       _metadata: { lastUpdated },
       inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile 
     };
+    const jsonString = JSON.stringify(dataToSave);
 
-    const { error } = await supabase
-      .from('master_data')
-      .upsert({ id: 1, data_payload: dataToSave, updated_at: lastUpdated });
+    const { error } = await supabase.storage
+        .from('master-data')
+        .upload('data.json', jsonString, {
+            cacheControl: '0', // No cache to ensure staff always get the latest version
+            upsert: true,
+            contentType: 'application/json'
+        });
 
     if (error) {
-      console.error('Failed to upload master data to Supabase:', error);
-      toast.error('Failed to save master data.');
+        console.error('Failed to upload master data to Supabase Storage:', error);
+        const detailedError = `Failed to save master data. Reason: ${error.message}`;
+        toast.error(detailedError);
+        throw new Error(detailedError);
     } else {
-        console.log('Master data uploaded successfully.');
+        console.log('Master data uploaded to storage successfully.');
     }
 }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, currentUser?.role]);
 
@@ -229,7 +236,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
             debounceTimer.current = window.setTimeout(() => {
-                uploadMasterData();
+                uploadMasterData().catch(e => console.error("Debounced master data upload failed:", e));
             }, 2000);
 
         } catch(e) {
@@ -249,25 +256,35 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (currentUser?.role !== 'staff') return;
     const toastId = silent ? null : toast.loading('Checking for updates...');
     try {
-        const { data, error } = await supabase
-            .from('master_data')
-            .select('data_payload')
-            .eq('id', 1)
-            .single();
+        const { data: fileList, error: listError } = await supabase.storage
+            .from('master-data')
+            .list('', { search: 'data.json', limit: 1 });
 
-        if (error || !data) {
-          console.error("Failed to fetch master data:", error);
-          throw new Error('Could not fetch data from admin. The admin may need to save data first.');
+        if (listError || !fileList || fileList.length === 0) {
+            console.error("Failed to find master data file:", listError);
+            throw new Error('Could not find admin data file. The admin may need to save data first.');
         }
-
-        const newData = data.data_payload;
-        const newTimestamp = newData?._metadata?.lastUpdated;
+        
+        const fileMetadata = fileList[0];
+        const newTimestamp = fileMetadata.updated_at;
 
         if (!newTimestamp) {
           throw new Error("Master data is missing a timestamp. Sync aborted.");
         }
 
         if (!lastSyncedAt || new Date(newTimestamp) > new Date(lastSyncedAt)) {
+            const { data: publicUrlData } = supabase.storage
+              .from('master-data')
+              .getPublicUrl('data.json');
+            
+            const url = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to download data file (status: ${response.status}).`);
+            }
+            const newData = await response.json();
+            
             loadAndSetData(newData);
             localStorage.setItem('appDataCache', JSON.stringify(newData));
             setLastSyncedAt(newTimestamp);
@@ -426,37 +443,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const toastId = toast.loading('Saving data & syncing for staff...');
 
-    // First, save to Google Drive (mimicking part of the useEffect logic)
-    if (!driveFileId || !tokenResponse || !tokenResponse.access_token) {
-        toast.error('Google Drive connection not found. Cannot save.', { id: toastId });
-        return;
-    }
     try {
-        const dataToSaveForDrive = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
-        await drive.updateFile(tokenResponse.access_token, driveFileId, dataToSaveForDrive);
-        localStorage.setItem('appDataCache', JSON.stringify(dataToSaveForDrive));
+        // First, save to Google Drive for backup
+        if (driveFileId && tokenResponse?.access_token) {
+            const dataToSaveForDrive = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
+            await drive.updateFile(tokenResponse.access_token, driveFileId, dataToSaveForDrive);
+            localStorage.setItem('appDataCache', JSON.stringify(dataToSaveForDrive));
+        } else {
+            throw new Error('Google Drive connection not found.');
+        }
+
+        // Then, save to Supabase Storage for staff sync
+        await uploadMasterData();
+        toast.success('Data saved and available for staff to sync.', { id: toastId });
     } catch (e) {
-        console.error("Failed to save data to drive", e);
-        toast.error("Failed to save data to Google Drive.", { id: toastId });
-        return; // Stop if drive save fails
-    }
-
-    // Then, save to Supabase
-    const lastUpdated = new Date().toISOString();
-    const dataToSaveForSupabase = { 
-      _metadata: { lastUpdated },
-      inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile 
-    };
-
-    const { error } = await supabase
-      .from('master_data')
-      .upsert({ id: 1, data_payload: dataToSaveForSupabase, updated_at: lastUpdated });
-
-    if (error) {
-      console.error('Failed to upload master data to Supabase:', error);
-      toast.error('Failed to save data for staff sync.', { id: toastId });
-    } else {
-      toast.success('Data saved and available for staff to sync.', { id: toastId });
+        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+        toast.error(`Save failed: ${errorMessage}`, { id: toastId });
     }
   };
 
