@@ -236,17 +236,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addInventoryItem = async (item: Omit<JewelryItem, 'id' | 'serialNo' | 'dateAdded'>) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
-    const categoryItems = inventory.filter(i => i.category === item.category);
-    const maxSerial = Math.max(0, ...categoryItems.map(i => parseInt(i.serialNo, 10) || 0));
-    const newSerialNo = (maxSerial + 1).toString().padStart(5, '0');
-    const newItem = { ...item, id: `ITEM-${Date.now()}`, serialNo: newSerialNo, dateAdded: new Date().toISOString() };
+
+    // Fetch the latest serial number directly from the database to prevent race conditions
+    const { data: maxSerialData, error: maxSerialError } = await supabase
+        .from('inventory')
+        .select('serialNo')
+        .eq('category', item.category)
+        .order('serialNo', { ascending: false })
+        .limit(1)
+        .single();
     
-    setInventory(prev => [...prev, newItem]); // Optimistic update
+    // 'PGRST116' is the code for 'single row not found', which is expected if no items exist for the category.
+    if (maxSerialError && maxSerialError.code !== 'PGRST116') {
+        toast.error(`Could not generate serial number: ${maxSerialError.message}`);
+        throw maxSerialError;
+    }
+
+    const maxSerial = maxSerialData ? parseInt(maxSerialData.serialNo, 10) : 0;
+    const newSerialNo = (maxSerial + 1).toString().padStart(5, '0');
+
+    // Use crypto.randomUUID for a more robust unique ID than Date.now()
+    const newItem = { ...item, id: `ITEM-${crypto.randomUUID()}`, serialNo: newSerialNo, dateAdded: new Date().toISOString() };
+    
+    // Optimistic update for immediate UI feedback
+    setInventory(prev => [...prev, newItem]);
 
     const { error } = await supabase.from('inventory').insert(newItem);
 
     if (error) {
-        setInventory(prev => prev.filter(i => i.id !== newItem.id)); // Rollback
+        // Rollback on failure
+        setInventory(prev => prev.filter(i => i.id !== newItem.id));
         toast.error(`Failed to add item: ${error.message}`);
         throw error;
     }
