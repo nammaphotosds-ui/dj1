@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Side-effect import to ensure global type declarations from types.ts are loaded.
+import './types';
 import { Toaster } from 'react-hot-toast';
 import DashboardPage from './components/DashboardPage';
 import InventoryPage from './components/InventoryPage';
@@ -20,16 +22,6 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
-
-// FIX: Add global declaration for the 'dotlottie-wc' web component to ensure it's recognized by TypeScript's JSX parser.
-// This was moved from index.tsx to fix type resolution issues.
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { src: string; autoplay?: boolean; loop?: boolean; style?: React.CSSProperties }, HTMLElement>;
-    }
-  }
-}
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();

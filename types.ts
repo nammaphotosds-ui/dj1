@@ -1,3 +1,6 @@
+// FIX: Import React types for use in global JSX declaration.
+import type React from 'react';
+
 export enum JewelryCategory {
   GOLD = 'Gold',
   SILVER = 'Silver',
@@ -106,3 +109,12 @@ export type CurrentUser = {
   role: UserRole;
   id: string; // 'admin' for admin, staff ID for staff
 };
+
+// FIX: Add global declaration for the 'dotlottie-wc' web component to ensure it's recognized by TypeScript's JSX parser.
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { src: string; autoplay?: boolean; loop?: boolean; style?: React.CSSProperties }, HTMLElement>;
+    }
+  }
+}

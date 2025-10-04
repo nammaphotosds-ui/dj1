@@ -18,7 +18,7 @@ const AppHeader: React.FC<{ currentPage: Page; }> = ({ currentPage }) => {
     return (
         <div className="flex justify-between items-center mb-6">
             <div>
-                 <h1 className="text-2xl md:text-3xl font-bold text-white md:text-brand-charcoal">{pageTitle}</h1>
+                 <h1 className="text-2xl md:text-3xl font-bold text-gray-300 md:text-brand-charcoal">{pageTitle}</h1>
                  <p className="text-sm text-gray-300 md:text-gray-500 hidden sm:block">Welcome, manage your store with ease.</p>
             </div>
         </div>
