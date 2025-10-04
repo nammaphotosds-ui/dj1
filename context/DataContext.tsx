@@ -125,10 +125,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const loadAndSetData = useCallback((content: any) => {
-    const inventoryData = content.inventory || [];
+    // If content has our metadata wrapper, use the data inside. Otherwise, use content directly for backward compatibility.
+    const actualData = content?._metadata ? {
+        inventory: content.inventory,
+        customers: content.customers,
+        bills: content.bills,
+        staff: content.staff,
+        distributors: content.distributors,
+        activityLogs: content.activityLogs,
+        adminProfile: content.adminProfile,
+    } : content;
+
+    const inventoryData = actualData.inventory || [];
     const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
 
-    const migratedBills = (content.bills || []).map((bill: Bill) => {
+    const migratedBills = (actualData.bills || []).map((bill: Bill) => {
         if (!bill || !Array.isArray(bill.items)) {
             return bill;
         }
@@ -152,28 +163,57 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     setInventory(inventoryData);
-    setRawCustomers(content.customers || []);
+    setRawCustomers(actualData.customers || []);
     setBills(migratedBills);
-    setStaff(content.staff || []);
-    setDistributors(content.distributors || []);
-    setActivityLogs(content.activityLogs || []);
-    setAdminProfile(content.adminProfile || { name: 'Admin' });
+    setStaff(actualData.staff || []);
+    setDistributors(actualData.distributors || []);
+    setActivityLogs(actualData.activityLogs || []);
+    setAdminProfile(actualData.adminProfile || { name: 'Admin' });
   }, []);
 
   const uploadMasterData = useCallback(async () => {
     if (currentUser?.role !== 'admin') return;
-    const dataToSave = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
-    const { error } = await supabase
-      .from('master_data')
-      .upsert({ id: 1, data_payload: dataToSave, updated_at: new Date().toISOString() });
+    
+    const lastUpdated = new Date().toISOString();
+    // Embed metadata right into the data object
+    const dataToSave = { 
+      _metadata: { lastUpdated },
+      inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile 
+    };
 
-    if (error) {
-      console.error('Failed to upload master data to Supabase:', error);
+    // 1. Update the canonical master data table
+    const { error: masterError } = await supabase
+      .from('master_data')
+      .upsert({ id: 1, data_payload: dataToSave, updated_at: lastUpdated });
+
+    if (masterError) {
+      console.error('Failed to upload master data to Supabase:', masterError);
       toast.error('Failed to sync master data.');
+      // Do not proceed to update the mirror if the main one fails
+      return;
     } else {
         console.log('Master data uploaded successfully.');
     }
-  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, currentUser?.role]);
+
+    // 2. Update the public-facing mirror for staff sync
+    const { error: mirrorError } = await supabase
+      .from('sync_sessions')
+      .upsert({ 
+          sync_code: 'LATEST_MASTER_DATA', 
+          data_payload: dataToSave, 
+          expires_at: new Date('2099-12-31T23:59:59Z').toISOString() 
+      }, { 
+          onConflict: 'sync_code'
+      });
+    
+    if (mirrorError) {
+        // This is not critical for the admin, but good to know
+        console.warn('Failed to update staff data mirror:', mirrorError);
+        // FIX: The `react-hot-toast` library does not have a `toast.warn` method.
+        // Changed to `toast.error` to align with existing error handling patterns in the app.
+        toast.error('Could not update staff data mirror. Staff may not get latest data.');
+    }
+}, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, currentUser?.role]);
 
   // Centralized data saving effect
   useEffect(() => {
@@ -232,18 +272,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const toastId = silent ? null : toast.loading('Checking for updates...');
     try {
         const { data, error } = await supabase
-            .from('master_data')
-            .select('updated_at, data_payload')
-            .eq('id', 1)
+            .from('sync_sessions') // Read from the public mirror
+            .select('data_payload')
+            .eq('sync_code', 'LATEST_MASTER_DATA')
             .single();
 
         if (error || !data) throw new Error('Could not fetch master data.');
 
-        if (!lastSyncedAt || new Date(data.updated_at) > new Date(lastSyncedAt)) {
-            const newData = data.data_payload;
+        const newData = data.data_payload;
+        const newTimestamp = newData?._metadata?.lastUpdated;
+
+        if (!newTimestamp) {
+          throw new Error("Master data is missing timestamp metadata. Sync aborted.");
+        }
+
+        if (!lastSyncedAt || new Date(newTimestamp) > new Date(lastSyncedAt)) {
             loadAndSetData(newData);
             localStorage.setItem('appDataCache', JSON.stringify(newData));
-            setLastSyncedAt(data.updated_at);
+            setLastSyncedAt(newTimestamp);
             if (toastId) toast.success('Data refreshed successfully!', { id: toastId });
             else toast.success('Data automatically updated from admin.');
         } else {
@@ -694,6 +740,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInventory(prevInventory => {
       let currentInventory = [...prevInventory];
       for (const bill of uniqueNewBills) {
+        if (bill.type === BillType.ESTIMATE) continue; // Do not deduct inventory for estimates
         const { updatedInventory: nextInventoryState, errors } = applyBillToInventory(
           currentInventory,
           bill
