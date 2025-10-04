@@ -14,6 +14,8 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
 
     useEffect(() => {
         if (category !== JewelryCategory.GOLD) {
+            setPurity('0');
+        } else {
             setPurity('');
         }
     }, [category]);
@@ -21,8 +23,15 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (category === JewelryCategory.GOLD && !purity.trim()) {
-            toast.error("Purity is required for Gold items.");
+        const weightValue = parseFloat(weight);
+        if (isNaN(weightValue) || weightValue <= 0) {
+            toast.error("Please enter a valid, positive weight.");
+            return;
+        }
+
+        const purityValue = parseFloat(purity);
+        if (category === JewelryCategory.GOLD && (isNaN(purityValue) || purityValue <= 0)) {
+            toast.error("Please enter a valid, positive purity for Gold items.");
             return;
         }
         
@@ -34,8 +43,8 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
                 name,
                 category,
                 distributorId,
-                weight: parseFloat(weight),
-                purity: category === JewelryCategory.GOLD ? parseFloat(purity) : 0,
+                weight: weightValue,
+                purity: category === JewelryCategory.GOLD ? purityValue : 0,
                 quantity: 1,
             });
 
@@ -49,7 +58,7 @@ const AddInventoryItemForm: React.FC<{onClose: ()=>void}> = ({onClose}) => {
         } catch (error) {
             toast.dismiss(savingToast);
             console.error("Failed to add inventory item:", error);
-            toast.error("An error occurred. Please try again.");
+            toast.error(error instanceof Error ? error.message : "An error occurred. Please try again.");
             setSubmissionStatus('idle');
         }
     };

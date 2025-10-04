@@ -3,6 +3,8 @@ import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import Logo from '../common/Logo';
 import PinEntryScreen from './PinEntryScreen';
+// FIX: Import UserRole type to ensure global type declarations from types.ts are included.
+import type { UserRole } from '../../types';
 
 export const WelcomeScreen: React.FC = () => (
     <div className="flex h-full w-full items-center justify-center">
@@ -62,7 +64,7 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
 };
 
 const LoginChooserScreen: React.FC<{ 
-    onSelectRole: (role: 'admin' | 'staff') => void;
+    onSelectRole: (role: UserRole) => void;
     isLoadingAdmin: boolean;
 }> = ({ onSelectRole, isLoadingAdmin }) => {
      return (
@@ -94,7 +96,7 @@ const LoginFlow: React.FC = () => {
     const [loginType, setLoginType] = useState<'chooser' | 'staff' | 'pin'>('chooser');
     const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
     
-    const handleSelectRole = async (role: 'admin' | 'staff') => {
+    const handleSelectRole = async (role: UserRole) => {
         if (role === 'admin') {
             setIsLoadingAdmin(true);
             await fetchAdminPin();

@@ -99,8 +99,11 @@ export interface StaffSyncRequest {
 
 export type Page = 'DASHBOARD' | 'INVENTORY' | 'CUSTOMERS' | 'BILLING' | 'SETTINGS' | 'REPORTS' | 'STAFF_MANAGEMENT' | 'DISTRIBUTOR_MANAGEMENT';
 
+// FIX: Extracted UserRole to be used for role definitions and to be imported in LoginFlow.tsx
+export type UserRole = 'admin' | 'staff';
+
 export type CurrentUser = {
-  role: 'admin' | 'staff';
+  role: UserRole;
   id: string; // 'admin' for admin, staff ID for staff
 };
 
@@ -108,7 +111,7 @@ export type CurrentUser = {
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { src: string; autoplay: boolean; loop: boolean; style?: React.CSSProperties }, HTMLElement>;
+      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { src: string; autoplay?: boolean; loop?: boolean; style?: React.CSSProperties }, HTMLElement>;
     }
   }
 }
