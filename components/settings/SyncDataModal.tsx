@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from '../../utils/toast';
 import { useDataContext } from '../../context/DataContext';
 import Modal from '../common/Modal';
 import { supabase } from '../../utils/supabase';

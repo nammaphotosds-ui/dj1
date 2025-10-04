@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { toast } from 'react-hot-toast';
+import { toast } from '../utils/toast';
 import { useDataContext } from '../context/DataContext';
 import { BillType, Page, JewelryCategory } from '../types';
 import type { JewelryItem, BillItem, Customer, Bill } from '../types';

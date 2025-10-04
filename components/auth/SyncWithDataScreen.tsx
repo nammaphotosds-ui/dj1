@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from '../../utils/toast';
 import { supabase } from '../../utils/supabase';
 
 const SyncWithDataScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {

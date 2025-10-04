@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useMemo, useCallback } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from '../utils/toast';
 // FIX: Import StaffSyncRequest type.
 import { BillType, StaffSyncRequest } from '../types';
 import type { JewelryItem, Customer, Bill, Staff, Distributor, ActivityLog, BillItem } from '../types';

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
-import { toast } from 'react-hot-toast';
+import { toast } from '../utils/toast';
 import { useDataContext } from '../context/DataContext';
 import { useUIContext } from '../context/UIContext';
 import { useAuthContext } from '../context/AuthContext';

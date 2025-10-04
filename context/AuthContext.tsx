@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import type { CurrentUser, Staff } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { supabase } from '../utils/supabase';
-import { toast } from 'react-hot-toast';
+import { toast } from '../utils/toast';
 
 interface AuthContextType {
   currentUser: CurrentUser | null;

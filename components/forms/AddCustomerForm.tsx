@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from '../../utils/toast';
 import { useDataContext } from '../../context/DataContext';
 
 const AddCustomerForm: React.FC<{onClose: () => void}> = ({ onClose }) => {
