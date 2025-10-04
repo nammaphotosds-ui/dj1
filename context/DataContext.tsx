@@ -175,43 +175,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (currentUser?.role !== 'admin') return;
     
     const lastUpdated = new Date().toISOString();
-    // Embed metadata right into the data object
     const dataToSave = { 
       _metadata: { lastUpdated },
       inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile 
     };
 
-    // 1. Update the canonical master data table
-    const { error: masterError } = await supabase
+    const { error } = await supabase
       .from('master_data')
       .upsert({ id: 1, data_payload: dataToSave, updated_at: lastUpdated });
 
-    if (masterError) {
-      console.error('Failed to upload master data to Supabase:', masterError);
-      toast.error('Failed to sync master data.');
-      // Do not proceed to update the mirror if the main one fails
-      return;
+    if (error) {
+      console.error('Failed to upload master data to Supabase:', error);
+      toast.error('Failed to save master data.');
     } else {
         console.log('Master data uploaded successfully.');
-    }
-
-    // 2. Update the public-facing mirror for staff sync
-    const { error: mirrorError } = await supabase
-      .from('sync_sessions')
-      .upsert({ 
-          sync_code: 'LATEST_MASTER_DATA', 
-          data_payload: dataToSave, 
-          expires_at: new Date('2099-12-31T23:59:59Z').toISOString() 
-      }, { 
-          onConflict: 'sync_code'
-      });
-    
-    if (mirrorError) {
-        // This is not critical for the admin, but good to know
-        console.warn('Failed to update staff data mirror:', mirrorError);
-        // FIX: The `react-hot-toast` library does not have a `toast.warn` method.
-        // Changed to `toast.error` to align with existing error handling patterns in the app.
-        toast.error('Could not update staff data mirror. Staff may not get latest data.');
     }
 }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, currentUser?.role]);
 
@@ -272,18 +249,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const toastId = silent ? null : toast.loading('Checking for updates...');
     try {
         const { data, error } = await supabase
-            .from('sync_sessions') // Read from the public mirror
+            .from('master_data')
             .select('data_payload')
-            .eq('sync_code', 'LATEST_MASTER_DATA')
+            .eq('id', 1)
             .single();
 
-        if (error || !data) throw new Error('Could not fetch master data.');
+        if (error || !data) {
+          console.error("Failed to fetch master data:", error);
+          throw new Error('Could not fetch data from admin. The admin may need to save data first.');
+        }
 
         const newData = data.data_payload;
         const newTimestamp = newData?._metadata?.lastUpdated;
 
         if (!newTimestamp) {
-          throw new Error("Master data is missing timestamp metadata. Sync aborted.");
+          throw new Error("Master data is missing a timestamp. Sync aborted.");
         }
 
         if (!lastSyncedAt || new Date(newTimestamp) > new Date(lastSyncedAt)) {
@@ -740,19 +720,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInventory(prevInventory => {
       let currentInventory = [...prevInventory];
       for (const bill of uniqueNewBills) {
-        if (bill.type === BillType.ESTIMATE) continue; // Do not deduct inventory for estimates
-        const { updatedInventory: nextInventoryState, errors } = applyBillToInventory(
-          currentInventory,
-          bill
-        );
-        if (errors.length > 0) {
-          toast.error(
-            `Inventory merge conflict for staff bill ${bill.id}: ${errors.join(
-              ', '
-            )}. Inventory may be inaccurate.`
-          );
+        if (bill.type === BillType.INVOICE) { // Deduct inventory for invoices
+            const { updatedInventory: nextInventoryState, errors } = applyBillToInventory(
+                currentInventory,
+                bill
+            );
+            if (errors.length > 0) {
+                toast.error(
+                    `Inventory merge conflict for staff bill ${bill.id}: ${errors.join(
+                        ', '
+                    )}. Inventory may be inaccurate.`
+                );
+            }
+            currentInventory = nextInventoryState;
         }
-        currentInventory = nextInventoryState;
       }
       return currentInventory;
     });
@@ -781,7 +762,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error("Failed to update sync request status.");
     }
     
-    setPendingSyncRequests(prev => prev.filter(req => req.id !== requestId));
+    refreshPendingSyncRequests();
     
     return result;
   };
