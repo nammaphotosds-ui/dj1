@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { Page, CurrentUser } from '../../types';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon, SettingsIcon } from '../common/Icons';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon, SettingsIcon, SyncIcon, UploadIcon } from '../common/Icons';
 import StaffSyncModal from '../settings/StaffSyncModal';
+import { useDataContext } from '../../context/DataContext';
 
 const NavItem: React.FC<{
     page: Page;
@@ -31,6 +32,12 @@ const MoreMenu: React.FC<{
     onClose: () => void;
     onOpenStaffSync: () => void;
 }> = ({ currentUser, setCurrentPage, onLogout, onClose, onOpenStaffSync }) => {
+    const { refreshDataFromAdmin } = useDataContext();
+
+    const handleRefresh = () => {
+        refreshDataFromAdmin();
+        onClose();
+    };
     
     const adminNavItems = [
         { label: 'Manage Staff', icon: <StaffIcon />, page: 'STAFF_MANAGEMENT' as Page, action: () => handleNav('STAFF_MANAGEMENT') },
@@ -39,7 +46,8 @@ const MoreMenu: React.FC<{
     ];
 
     const staffNavItems = [
-        { label: 'Sync Changes to Admin', icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9V3m0 18a9 9 0 0 0 9-9M3 12a9 9 0 0 0 9 9"/></svg>, action: onOpenStaffSync },
+        { label: 'Refresh Data from Admin', icon: <SyncIcon />, action: handleRefresh },
+        { label: 'Sync Changes to Admin', icon: <UploadIcon />, action: onOpenStaffSync },
     ];
 
     const menuItems = currentUser.role === 'admin' ? adminNavItems : staffNavItems;

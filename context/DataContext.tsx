@@ -42,10 +42,9 @@ interface DataContextType {
   clearStaffChanges: () => void;
   pendingSyncRequests: StaffSyncRequest[];
   processSyncRequest: (requestId: number, payload: string, action: 'merge' | 'reject') => Promise<{ customersAdded: number; billsAdded: number; }>;
-  // FIX: Added refreshPendingSyncRequests to context type to resolve usage errors.
   refreshPendingSyncRequests: () => Promise<void>;
-  // FIX: Added mergeStaffData to the context type to make it available to components.
   mergeStaffData: (payload: string) => Promise<{ customersAdded: number; billsAdded: number; }>;
+  refreshDataFromAdmin: (silent?: boolean) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -64,8 +63,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [staffChanges, setStaffChanges] = useLocalStorage<{ customers: Omit<Customer, 'pendingBalance'>[]; bills: Bill[] }>('staffChangesCache', { customers: [], bills: [] });
   
   const [driveFileId, setDriveFileId] = useLocalStorage<string | null>('driveFileId', null);
+  const [lastSyncedAt, setLastSyncedAt] = useLocalStorage<string | null>('lastSyncedAt', null);
   const [error, setError] = useState<string | null>(null);
   const isInitialLoad = useRef(true);
+  const debounceTimer = useRef<number | null>(null);
   const [pendingSyncRequests, setPendingSyncRequests] = useState<StaffSyncRequest[]>([]);
   
   const customers: Customer[] = useMemo(() => {
@@ -123,6 +124,56 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setActivityLogs(prev => [newLog, ...prev].slice(0, 50)); // Keep last 50 logs
   };
 
+  const loadAndSetData = useCallback((content: any) => {
+    const inventoryData = content.inventory || [];
+    const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
+
+    const migratedBills = (content.bills || []).map((bill: Bill) => {
+        if (!bill || !Array.isArray(bill.items)) {
+            return bill;
+        }
+        const items = (bill.items || []).map((item: unknown) => {
+            if (typeof item !== 'object' || item === null) {
+                return item;
+            }
+            if ('category' in item && typeof (item as { category: unknown }).category === 'string') {
+                return item as BillItem;
+            }
+            let inventoryItem;
+            if ('itemId' in item && typeof (item as { itemId: unknown }).itemId === 'string') {
+                inventoryItem = inventoryMap.get((item as { itemId: string }).itemId);
+            }
+            return {
+                ...(item as object),
+                category: inventoryItem ? inventoryItem.category : 'N/A',
+            };
+        });
+        return { ...bill, items };
+    });
+
+    setInventory(inventoryData);
+    setRawCustomers(content.customers || []);
+    setBills(migratedBills);
+    setStaff(content.staff || []);
+    setDistributors(content.distributors || []);
+    setActivityLogs(content.activityLogs || []);
+    setAdminProfile(content.adminProfile || { name: 'Admin' });
+  }, []);
+
+  const uploadMasterData = useCallback(async () => {
+    if (currentUser?.role !== 'admin') return;
+    const dataToSave = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
+    const { error } = await supabase
+      .from('master_data')
+      .upsert({ id: 1, data_payload: dataToSave, updated_at: new Date().toISOString() });
+
+    if (error) {
+      console.error('Failed to upload master data to Supabase:', error);
+      toast.error('Failed to sync master data.');
+    } else {
+        console.log('Master data uploaded successfully.');
+    }
+  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, currentUser?.role]);
 
   // Centralized data saving effect
   useEffect(() => {
@@ -157,6 +208,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await drive.updateFile(tokenResponse.access_token, driveFileId, dataToSave);
             localStorage.setItem('appDataCache', JSON.stringify(dataToSave));
             if (error) setError(null);
+
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+            debounceTimer.current = window.setTimeout(() => {
+                uploadMasterData();
+            }, 2000);
+
         } catch(e) {
             console.error("Failed to save data to drive", e);
             setError("Failed to save data. Please check your connection.");
@@ -164,47 +221,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     saveDataToDrive();
-  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile]);
+    
+    return () => {
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    }
+  }, [inventory, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, uploadMasterData]);
+
+  const refreshDataFromAdmin = useCallback(async (silent = false) => {
+    if (currentUser?.role !== 'staff') return;
+    const toastId = silent ? null : toast.loading('Checking for updates...');
+    try {
+        const { data, error } = await supabase
+            .from('master_data')
+            .select('updated_at, data_payload')
+            .eq('id', 1)
+            .single();
+
+        if (error || !data) throw new Error('Could not fetch master data.');
+
+        if (!lastSyncedAt || new Date(data.updated_at) > new Date(lastSyncedAt)) {
+            const newData = data.data_payload;
+            loadAndSetData(newData);
+            localStorage.setItem('appDataCache', JSON.stringify(newData));
+            setLastSyncedAt(data.updated_at);
+            if (toastId) toast.success('Data refreshed successfully!', { id: toastId });
+            else toast.success('Data automatically updated from admin.');
+        } else {
+            if (toastId) toast.success('You already have the latest data.', { id: toastId });
+        }
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        if (toastId) toast.error(`Failed to refresh: ${msg}`, { id: toastId });
+        else console.error(`Silent refresh failed: ${msg}`);
+    }
+  }, [currentUser?.role, lastSyncedAt, setLastSyncedAt, loadAndSetData]);
+
 
   // Data Loading Effect
   useEffect(() => {
-    const loadAndSetData = (content: any) => {
-        const inventoryData = content.inventory || [];
-        const inventoryMap = new Map(inventoryData.map((item: JewelryItem) => [item.id, item]));
-
-        const migratedBills = (content.bills || []).map((bill: Bill) => {
-            if (!bill || !Array.isArray(bill.items)) {
-                return bill;
-            }
-            const items = (bill.items || []).map((item: unknown) => {
-                if (typeof item !== 'object' || item === null) {
-                    return item;
-                }
-                if ('category' in item && typeof (item as { category: unknown }).category === 'string') {
-                    return item as BillItem;
-                }
-                let inventoryItem;
-                if ('itemId' in item && typeof (item as { itemId: unknown }).itemId === 'string') {
-                    inventoryItem = inventoryMap.get((item as { itemId: string }).itemId);
-                }
-                return {
-                    ...(item as object),
-                    category: inventoryItem ? inventoryItem.category : 'N/A',
-                };
-            });
-            return { ...bill, items };
-        });
-
-
-        setInventory(inventoryData);
-        setRawCustomers(content.customers || []);
-        setBills(migratedBills);
-        setStaff(content.staff || []);
-        setDistributors(content.distributors || []);
-        setActivityLogs(content.activityLogs || []);
-        setAdminProfile(content.adminProfile || { name: 'Admin' });
-    };
-    
     const initData = async () => {
         isInitialLoad.current = true;
         setError(null);
@@ -244,7 +298,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (isAuthInitialized) {
         initData();
     }
-  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser, refreshPendingSyncRequests]);
+  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser, refreshPendingSyncRequests, loadAndSetData]);
+
+   useEffect(() => {
+    if (isAuthInitialized && currentUser?.role === 'staff') {
+      refreshDataFromAdmin(true);
+    }
+  }, [isAuthInitialized, currentUser?.role, refreshDataFromAdmin]);
 
   const getNextCustomerId = () => {
       const allCustomers = [...rawCustomers, ...staffChanges.customers];
@@ -656,7 +716,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData, refreshDataFromAdmin }}>
       {children}
     </DataContext.Provider>
   );
