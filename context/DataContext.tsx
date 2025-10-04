@@ -16,6 +16,7 @@ interface DataContextType {
   activityLogs: ActivityLog[];
   adminProfile: { name: string };
   userNameMap: Map<string, string>;
+  isInitialStaffListLoaded: boolean;
   // FIX: Add pendingSyncRequests to the context type.
   pendingSyncRequests: StaffSyncRequest[];
   updateAdminName: (name: string) => Promise<void>;
@@ -57,6 +58,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [adminProfile, setAdminProfile] = useState<{ name: string }>({ name: 'Admin' });
+  const [isInitialStaffListLoaded, setIsInitialStaffListLoaded] = useState(false);
   // FIX: Add state for pending sync requests.
   const [pendingSyncRequests, setPendingSyncRequests] = useState<StaffSyncRequest[]>([]);
 
@@ -101,6 +103,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // If no user is logged in, we ONLY need the staff list for the login screen.
       if (!currentUser) {
+          setIsInitialStaffListLoaded(false);
           try {
               const { data, error } = await supabase.from('staff').select('*');
               if (error) throw error;
@@ -108,6 +111,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } catch (error) {
               console.error("Error fetching staff list for login:", error);
               toast.error("Could not load staff data for login.");
+          } finally {
+              setIsInitialStaffListLoaded(true);
           }
           return; // Stop here, don't fetch anything else
       }
@@ -432,6 +437,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <DataContext.Provider value={{ 
         inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, 
+        isInitialStaffListLoaded,
         updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, 
         createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, 
         resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill,

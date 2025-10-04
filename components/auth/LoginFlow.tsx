@@ -24,7 +24,7 @@ export const WelcomeScreen: React.FC = () => (
 
 const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const { loginAsStaff } = useAuthContext();
-    const { staff } = useDataContext();
+    const { staff, isInitialStaffListLoaded } = useDataContext();
     const [staffId, setStaffId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -41,15 +41,17 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
         setIsLoading(false);
     };
 
+    const isLoginDisabled = isLoading || !isInitialStaffListLoaded;
+
     return (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
             <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
             <h2 className="text-3xl font-serif text-brand-charcoal mb-2">Staff Login</h2>
             <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
-                <input type="text" value={staffId} onChange={e => setStaffId(e.target.value)} placeholder="Staff ID" className="w-full p-3 border rounded" required />
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full p-3 border rounded" required />
-                <button type="submit" disabled={isLoading} className="w-full p-3 bg-brand-gold text-brand-charcoal rounded-lg font-semibold hover:bg-brand-gold-dark transition disabled:opacity-70">
-                    {isLoading ? 'Logging in...' : 'Login'}
+                <input type="text" value={staffId} onChange={e => setStaffId(e.target.value)} placeholder="Staff ID" className="w-full p-3 border rounded" required disabled={isLoginDisabled} />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full p-3 border rounded" required disabled={isLoginDisabled} />
+                <button type="submit" disabled={isLoginDisabled} className="w-full p-3 bg-brand-gold text-brand-charcoal rounded-lg font-semibold hover:bg-brand-gold-dark transition disabled:opacity-70">
+                    {isLoading ? 'Logging in...' : !isInitialStaffListLoaded ? 'Loading...' : 'Login'}
                 </button>
                 {error && <p className="text-red-600 text-sm">{error}</p>}
             </form>
