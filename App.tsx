@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import DashboardPage from './components/DashboardPage';
@@ -9,8 +10,9 @@ import SettingsPage from './components/SettingsPage';
 import ReportsPage from './components/ReportsPage';
 import StaffManagementPage from './components/StaffManagementPage';
 import DistributorManagementPage from './components/DistributorManagementPage';
-// FIX: Changed to a regular import to ensure global JSX type augmentations from './types' are applied.
-import { Page } from './types';
+// FIX: Added a side-effect import to ensure global JSX type augmentations from './types' are applied, as type-only imports may be elided by the compiler.
+import './types';
+import type { Page } from './types';
 import { useAuthContext } from './context/AuthContext';
 import { useUIContext } from './context/UIContext';
 import { useDataContext } from './context/DataContext';

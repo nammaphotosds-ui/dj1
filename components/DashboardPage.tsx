@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
@@ -75,21 +76,37 @@ const SalesChart: React.FC = () => {
         if (!chartRef.current) return;
 
         const processData = () => {
+            // Get the last 7 days as YYYY-MM-DD strings in the local timezone
             const last7Days = Array.from({ length: 7 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                return d.toISOString().split('T')[0];
+                // Format to YYYY-MM-DD in local timezone
+                const year = d.getFullYear();
+                const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                const day = d.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }).reverse();
 
-            const salesData = last7Days.map(dateStr => {
-                const daySales = bills
-                    .filter(bill => bill.date.startsWith(dateStr))
-                    .reduce((sum, bill) => sum + bill.grandTotal, 0);
-                return daySales;
+            // Group bills by their local date
+            const salesByDate: Record<string, number> = {};
+            bills.forEach(bill => {
+                const billDate = new Date(bill.date); // Parses ISO string to local Date object
+                const year = billDate.getFullYear();
+                const month = (billDate.getMonth() + 1).toString().padStart(2, '0');
+                const day = billDate.getDate().toString().padStart(2, '0');
+                const localDateStr = `${year}-${month}-${day}`;
+                salesByDate[localDateStr] = (salesByDate[localDateStr] || 0) + bill.grandTotal;
             });
 
+            const salesData = last7Days.map(dateStr => salesByDate[dateStr] || 0);
+
             return {
-                labels: last7Days.map(d => new Date(d).toLocaleDateString('en-US', { weekday: 'short' })),
+                labels: last7Days.map(d => {
+                    // Adding T00:00:00 ensures it's parsed as a local date, not UTC.
+                    // This prevents timezone-related off-by-one-day errors for the label.
+                    const date = new Date(`${d}T00:00:00`);
+                    return date.toLocaleDateString('en-US', { weekday: 'short' });
+                }),
                 data: salesData,
             };
         };

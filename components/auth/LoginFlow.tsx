@@ -1,11 +1,13 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import Logo from '../common/Logo';
 import PinEntryScreen from './PinEntryScreen';
-// FIX: Changed to a regular import to ensure global JSX type augmentations from '../../types' are applied.
-import { UserRole } from '../../types';
+// FIX: Added a side-effect import to ensure global JSX type augmentations from '../../types' are applied, as type-only imports may be elided by the compiler.
+import '../../types';
+import type { UserRole } from '../../types';
 import CreatorFooter from '../common/CreatorFooter';
 
 export const WelcomeScreen: React.FC = () => (
