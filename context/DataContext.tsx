@@ -97,8 +97,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Data Loading Effect
   useEffect(() => {
     const initData = async () => {
-      if (!isAuthInitialized || !currentUser) return;
+      if (!isAuthInitialized) return;
+
+      // If no user is logged in, we ONLY need the staff list for the login screen.
+      if (!currentUser) {
+          try {
+              const { data, error } = await supabase.from('staff').select('*');
+              if (error) throw error;
+              setStaff(data || []);
+          } catch (error) {
+              console.error("Error fetching staff list for login:", error);
+              toast.error("Could not load staff data for login.");
+          }
+          return; // Stop here, don't fetch anything else
+      }
       
+      // If a user IS logged in, fetch everything.
       const tableFetchers = [
         supabase.from('inventory').select('*').then(({ data, error }) => { if (error) throw error; setInventory(data || []); }),
         supabase.from('customers').select('*').then(({ data, error }) => { if (error) throw error; setRawCustomers(data || []); }),
