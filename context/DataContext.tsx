@@ -17,6 +17,7 @@ interface DataContextType {
   adminProfile: { name: string };
   userNameMap: Map<string, string>;
   isInitialStaffListLoaded: boolean;
+  isLoading: boolean;
   // FIX: Add pendingSyncRequests to the context type.
   pendingSyncRequests: StaffSyncRequest[];
   updateAdminName: (name: string) => Promise<void>;
@@ -59,6 +60,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [adminProfile, setAdminProfile] = useState<{ name: string }>({ name: 'Admin' });
   const [isInitialStaffListLoaded, setIsInitialStaffListLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   // FIX: Add state for pending sync requests.
   const [pendingSyncRequests, setPendingSyncRequests] = useState<StaffSyncRequest[]>([]);
 
@@ -101,6 +103,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const initData = async () => {
       if (!isAuthInitialized) return;
 
+      setIsLoading(true);
+
       // If no user is logged in, we ONLY need the staff list for the login screen.
       if (!currentUser) {
           setIsInitialStaffListLoaded(false);
@@ -113,6 +117,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               toast.error("Could not load staff data for login.");
           } finally {
               setIsInitialStaffListLoaded(true);
+              setIsLoading(false);
           }
           return; // Stop here, don't fetch anything else
       }
@@ -134,7 +139,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await Promise.all(tableFetchers);
       } catch (error) {
         console.error("Error fetching initial data from Supabase:", error);
-        toast.error("Could not load store data. Check your connection and RLS policies.");
+      } finally {
+        setIsLoading(false);
       }
     };
     initData();
@@ -438,6 +444,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <DataContext.Provider value={{ 
         inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, 
         isInitialStaffListLoaded,
+        isLoading,
         updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, 
         createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, 
         resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill,
