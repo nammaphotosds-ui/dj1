@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { CurrentUser, Staff } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
-import { hashPassword } from '../utils/crypto';
 import { supabase } from '../utils/supabase';
 import { toast } from 'react-hot-toast';
 
@@ -9,9 +8,9 @@ interface AuthContextType {
   currentUser: CurrentUser | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<CurrentUser | null>>;
   isInitialized: boolean;
-  loginAsStaff: (staffList: Staff[], id: string, pass: string) => Promise<boolean>;
+  loginAsStaff: (staffList: Staff[], id: string, pass: string) => boolean;
   error: string | null;
-  verifyAdminPin: (pin: string) => Promise<boolean>;
+  verifyAdminPin: (pin: string) => boolean;
   updateAdminPin: (newPin: string) => Promise<void>;
   resetAdminPin: () => Promise<void>;
   fetchAdminPin: () => Promise<void>;
@@ -19,14 +18,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Hashed version of the default PIN "4004"
-const DEFAULT_PIN_HASH = '3142751528642a8a80a2211933a362334a625451259543163b01f3916295c5c0';
+// The default PIN is "4004"
+const DEFAULT_PIN = '4004';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useLocalStorage<CurrentUser | null>('currentUser', null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [adminPinHash, setAdminPinHash] = useState<string | null>(null);
+  const [adminPin, setAdminPin] = useState<string | null>(null);
 
   useEffect(() => {
     const initAuth = () => {
@@ -40,50 +39,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      try {
         const { data, error } = await supabase
             .from('admin_config')
-            .select('pin_hash')
+            .select('pin_hash') // Column name is still pin_hash but stores raw PIN
             .eq('id', 1)
             .single();
 
-        if (error || !data) {
+        if (error || !data || !data.pin_hash) {
             console.warn("No PIN found in Supabase, using default. If this is the first run, this is expected.");
-            setAdminPinHash(DEFAULT_PIN_HASH);
+            setAdminPin(DEFAULT_PIN);
             return;
         }
-
-        setAdminPinHash(data.pin_hash);
+        
+        // Stores the raw PIN from the database
+        setAdminPin(data.pin_hash);
 
      } catch (e) {
         console.error("Failed to fetch PIN from Supabase:", e);
         toast.error("Could not fetch PIN. Using default.");
-        setAdminPinHash(DEFAULT_PIN_HASH);
+        setAdminPin(DEFAULT_PIN);
      }
   };
   
-  const loginAsStaff = async (staffList: Staff[], id: string, pass: string): Promise<boolean> => {
+  const loginAsStaff = (staffList: Staff[], id: string, pass: string): boolean => {
     const trimmedId = id.trim();
     const trimmedPass = pass.trim();
     if (!trimmedId || !trimmedPass) return false;
     const staffMember = staffList.find(s => s.id.toLowerCase() === trimmedId.toLowerCase());
     if (!staffMember) return false;
-    const hash = await hashPassword(trimmedPass);
-    if (hash === staffMember.passwordHash) {
+    
+    // Direct password comparison (no hashing)
+    if (trimmedPass === staffMember.passwordHash) {
         setCurrentUser({ role: 'staff', id: staffMember.id });
         return true;
     }
     return false;
   };
 
-  const verifyAdminPin = async (pin: string): Promise<boolean> => {
-    const incomingPinHash = await hashPassword(pin);
-    // If PIN hash hasn't been fetched, use the default hash for comparison
-    return incomingPinHash === (adminPinHash || DEFAULT_PIN_HASH);
+  const verifyAdminPin = (pin: string): boolean => {
+    // Direct PIN comparison (no hashing)
+    return pin === (adminPin || DEFAULT_PIN);
   };
 
   const updateAdminPin = async (newPin: string) => {
-    const newPinHash = await hashPassword(newPin);
+    // Store the new PIN directly (no hashing)
     const { data, error } = await supabase
         .from('admin_config')
-        .upsert({ id: 1, pin_hash: newPinHash, updated_at: new Date().toISOString() })
+        .upsert({ id: 1, pin_hash: newPin, updated_at: new Date().toISOString() })
         .select()
         .single();
     
@@ -91,20 +91,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("Supabase update error:", error);
         throw new Error("Failed to update PIN in the database.");
     }
-    setAdminPinHash(newPinHash);
+    setAdminPin(newPin);
   };
 
   const resetAdminPin = async () => {
+    // Store the default PIN directly (no hashing)
     const { error } = await supabase
         .from('admin_config')
-        .update({ pin_hash: DEFAULT_PIN_HASH, updated_at: new Date().toISOString() })
+        .update({ pin_hash: DEFAULT_PIN, updated_at: new Date().toISOString() })
         .eq('id', 1);
     
     if (error) {
         console.error("Supabase reset error:", error);
         throw new Error("Failed to reset PIN in the database.");
     }
-    setAdminPinHash(DEFAULT_PIN_HASH);
+    setAdminPin(DEFAULT_PIN);
   };
 
   return (
