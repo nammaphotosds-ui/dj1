@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import type { Page, CurrentUser } from '../../types';
-import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon, SettingsIcon, SyncIcon, UploadIcon } from '../common/Icons';
-import StaffSyncModal from '../settings/StaffSyncModal';
-import { useDataContext } from '../../context/DataContext';
+import { HomeIcon, UsersIcon, BillingIcon, InventoryIcon, LogoutIcon, StaffIcon, DistributorIcon, SettingsIcon } from '../common/Icons';
 
 const NavItem: React.FC<{
     page: Page;
@@ -30,33 +28,15 @@ const MoreMenu: React.FC<{
     setCurrentPage: (page: Page) => void;
     onLogout: () => void;
     onClose: () => void;
-    onOpenStaffSync: () => void;
-}> = ({ currentUser, setCurrentPage, onLogout, onClose, onOpenStaffSync }) => {
-    const { refreshDataFromAdmin, forceSaveAdminData } = useDataContext();
-
-    const handleRefresh = () => {
-        refreshDataFromAdmin();
-        onClose();
-    };
-    
-    const handleForceSave = () => {
-        forceSaveAdminData();
-        onClose();
-    };
+}> = ({ currentUser, setCurrentPage, onLogout, onClose }) => {
 
     const adminNavItems = [
-        { label: 'Save & Sync Data', icon: <UploadIcon />, action: handleForceSave },
-        { label: 'Manage Staff', icon: <StaffIcon />, page: 'STAFF_MANAGEMENT' as Page, action: () => handleNav('STAFF_MANAGEMENT') },
-        { label: 'Manage Distributors', icon: <DistributorIcon />, page: 'DISTRIBUTOR_MANAGEMENT' as Page, action: () => handleNav('DISTRIBUTOR_MANAGEMENT') },
-        { label: 'Settings', icon: <SettingsIcon />, page: 'SETTINGS' as Page, action: () => handleNav('SETTINGS') },
+        { label: 'Manage Staff', icon: <StaffIcon />, action: () => handleNav('STAFF_MANAGEMENT') },
+        { label: 'Manage Distributors', icon: <DistributorIcon />, action: () => handleNav('DISTRIBUTOR_MANAGEMENT') },
+        { label: 'Settings', icon: <SettingsIcon />, action: () => handleNav('SETTINGS') },
     ];
 
-    const staffNavItems = [
-        { label: 'Refresh Data from Admin', icon: <SyncIcon />, action: handleRefresh },
-        { label: 'Sync Changes to Admin', icon: <UploadIcon />, action: onOpenStaffSync },
-    ];
-
-    const menuItems = currentUser.role === 'admin' ? adminNavItems : staffNavItems;
+    const menuItems = currentUser.role === 'admin' ? adminNavItems : [];
     
     const handleNav = (page: Page) => {
         setCurrentPage(page);
@@ -72,14 +52,16 @@ const MoreMenu: React.FC<{
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose}>
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4 pb-6 shadow-lg" onClick={e => e.stopPropagation()}>
                  <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                <div className="space-y-2 mb-4 pb-4 border-b">
-                    {menuItems.map(item => (
-                        <button key={item.label} onClick={item.action} className="w-full flex items-center p-3 hover:bg-gray-100 rounded-lg">
-                            {item.icon}
-                            <span className="ml-3 font-semibold">{item.label}</span>
-                        </button>
-                    ))}
-                </div>
+                {menuItems.length > 0 && (
+                    <div className="space-y-2 mb-4 pb-4 border-b">
+                        {menuItems.map(item => (
+                            <button key={item.label} onClick={item.action} className="w-full flex items-center p-3 hover:bg-gray-100 rounded-lg">
+                                {item.icon}
+                                <span className="ml-3 font-semibold">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <button onClick={handleLogout} className="w-full flex items-center justify-center p-3 bg-red-50 text-red-600 rounded-lg font-semibold mt-2">
                     <LogoutIcon />
                     <span className="ml-2">Logout</span>
@@ -97,7 +79,6 @@ const BottomNavBar: React.FC<{
     onLogout: () => void;
 }> = ({ currentUser, currentPage, setCurrentPage, onLogout }) => {
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-    const [isStaffSyncModalOpen, setIsStaffSyncModalOpen] = useState(false);
     const isStaff = currentUser.role === 'staff';
 
     const mainNavItems = isStaff
@@ -138,16 +119,6 @@ const BottomNavBar: React.FC<{
                     setCurrentPage={setCurrentPage}
                     onLogout={onLogout}
                     onClose={() => setIsMoreMenuOpen(false)}
-                    onOpenStaffSync={() => {
-                        setIsMoreMenuOpen(false);
-                        setIsStaffSyncModalOpen(true);
-                    }}
-                />
-            )}
-            {isStaff && (
-                <StaffSyncModal 
-                    isOpen={isStaffSyncModalOpen}
-                    onClose={() => setIsStaffSyncModalOpen(false)}
                 />
             )}
         </>

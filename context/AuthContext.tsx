@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { CurrentUser, GoogleTokenResponse, Staff } from '../types';
+import type { CurrentUser, Staff } from '../types';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { hashPassword } from '../utils/crypto';
 import { supabase } from '../utils/supabase';
@@ -11,8 +11,6 @@ interface AuthContextType {
   isInitialized: boolean;
   loginAsStaff: (staffList: Staff[], id: string, pass: string) => Promise<boolean>;
   error: string | null;
-  tokenResponse: GoogleTokenResponse | null;
-  setTokenResponse: React.Dispatch<React.SetStateAction<GoogleTokenResponse | null>>;
   verifyAdminPin: (pin: string) => Promise<boolean>;
   updateAdminPin: (newPin: string) => Promise<void>;
   resetAdminPin: () => Promise<void>;
@@ -25,7 +23,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const DEFAULT_PIN_HASH = '3142751528642a8a80a2211933a362334a625451259543163b01f3916295c5c0';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [tokenResponse, setTokenResponse] = useLocalStorage<GoogleTokenResponse | null>('googleTokenResponse', null);
   const [currentUser, setCurrentUser] = useLocalStorage<CurrentUser | null>('currentUser', null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +31,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const initAuth = () => {
       setError(null);
-      if (currentUser?.role === 'admin' && (!tokenResponse || !tokenResponse.expires_at || tokenResponse.expires_at < Date.now())) {
-        setCurrentUser(null);
-      }
       setIsInitialized(true);
     };
     initAuth();
-  }, [tokenResponse, currentUser, setCurrentUser]);
+  }, [currentUser]);
 
   const fetchAdminPin = async () => {
      try {
@@ -87,12 +81,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateAdminPin = async (newPin: string) => {
     const newPinHash = await hashPassword(newPin);
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('admin_config')
-        .update({ pin_hash: newPinHash, updated_at: new Date().toISOString() })
-        .eq('id', 1);
+        .upsert({ id: 1, pin_hash: newPinHash, updated_at: new Date().toISOString() })
+        .select()
+        .single();
     
-    if (error) {
+    if (error || !data) {
         console.error("Supabase update error:", error);
         throw new Error("Failed to update PIN in the database.");
     }
@@ -113,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, setCurrentUser, isInitialized, loginAsStaff, error, tokenResponse, setTokenResponse, verifyAdminPin, updateAdminPin, resetAdminPin, fetchAdminPin }}>
+    <AuthContext.Provider value={{ currentUser, setCurrentUser, isInitialized, loginAsStaff, error, verifyAdminPin, updateAdminPin, resetAdminPin, fetchAdminPin }}>
       {children}
     </AuthContext.Provider>
   );

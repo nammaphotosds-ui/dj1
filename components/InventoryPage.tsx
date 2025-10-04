@@ -31,8 +31,8 @@ const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string
                 </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-                 <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${item.quantity > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                    {item.quantity > 0 ? 'In Stock' : 'Sold Out'}
+                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                    In Stock
                  </span>
                  <button 
                     onClick={() => onEdit(item)} 
@@ -73,14 +73,14 @@ const InventoryPage: React.FC = () => {
     const categories = [...Object.values(JewelryCategory)];
 
     const filteredInventory = useMemo(() => {
-        return inventory.filter(item => item.category === selectedCategory);
+        return inventory.filter(item => item.category === selectedCategory && item.quantity > 0);
     }, [inventory, selectedCategory]);
 
     const inventoryStats = useMemo(() => {
         const totalStock = filteredInventory.reduce((sum, item) => sum + item.quantity, 0);
         const totalWeight = filteredInventory.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
         return {
-            uniqueItemCount: filteredInventory.filter(item => item.quantity > 0).length,
+            uniqueItemCount: filteredInventory.length,
             totalStock,
             totalWeight
         };

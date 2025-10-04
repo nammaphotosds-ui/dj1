@@ -2,8 +2,8 @@ import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
 import { useAuthContext } from '../context/AuthContext';
-import { Page, JewelryCategory, Bill, BillItem, Staff, StaffSyncRequest } from '../types';
-import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon, StaffIcon, PendingIcon, PlusCircleIcon } from './common/Icons';
+import { Page, JewelryCategory, Bill, BillItem, Staff } from '../types';
+import { UsersIcon, BillingIcon, RevenueIcon, WeightIcon, StaffIcon } from './common/Icons';
 
 declare const Chart: any;
 
@@ -217,45 +217,7 @@ const RecentTransactions: React.FC = () => {
 }
 
 const StaffPerformance: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCurrentPage }) => {
-    const { staff, customers, bills, userNameMap, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests } = useDataContext();
-    const [processingStaffId, setProcessingStaffId] = useState<string | null>(null);
-
-    useEffect(() => {
-        refreshPendingSyncRequests();
-    }, [refreshPendingSyncRequests]);
-
-    const pendingRequestsByStaff = useMemo(() => {
-        const map = new Map<string, StaffSyncRequest[]>();
-        pendingSyncRequests.forEach(req => {
-            if (!map.has(req.staff_id)) {
-                map.set(req.staff_id, []);
-            }
-            map.get(req.staff_id)!.push(req);
-        });
-        return map;
-    }, [pendingSyncRequests]);
-    
-    const handleMergeRequest = async (staffId: string) => {
-        const requestsToProcess = pendingRequestsByStaff.get(staffId);
-        if (!requestsToProcess || requestsToProcess.length === 0) {
-            toast.error("No pending request found for this staff member.");
-            return;
-        }
-        
-        const request = requestsToProcess[0]; // Process the first pending request
-
-        setProcessingStaffId(staffId);
-        const toastId = toast.loading(`Merging ${request.changes_count} changes from ${request.staff_name}...`);
-        try {
-            const result = await processSyncRequest(request.id, request.data_payload, 'merge');
-            toast.success(`Successfully merged ${result.customersAdded} customers and ${result.billsAdded} bills.`, { id: toastId });
-        } catch (e) {
-            const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-            toast.error(`Failed to merge changes: ${errorMessage}`, { id: toastId });
-        } finally {
-            setProcessingStaffId(null);
-        }
-    };
+    const { staff, customers, bills, userNameMap } = useDataContext();
 
     const staffStats = useMemo(() => {
         return staff.map(s => {
@@ -298,41 +260,13 @@ const StaffPerformance: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ 
                     <StaffIcon />
                     <span className="ml-2">Staff Performance</span>
                 </h2>
-                <button 
-                    onClick={() => refreshPendingSyncRequests()} 
-                    className="p-2 text-gray-500 rounded-full hover:bg-gray-100"
-                    aria-label="Refresh sync requests"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                </button>
             </div>
             <div className="space-y-3 max-h-72 overflow-y-auto">
                 {staffStats.map(stat => {
-                    const hasPendingRequest = pendingRequestsByStaff.has(stat.id);
-                    const pendingChangesCount = hasPendingRequest ? pendingRequestsByStaff.get(stat.id)![0].changes_count : 0;
-                    const isProcessing = processingStaffId === stat.id;
-                    
                     return (
                         <div key={stat.id} className="border-b pb-2 last:border-b-0">
                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <p className="font-semibold">{stat.name}</p>
-                                    {hasPendingRequest && !isProcessing && (
-                                        <button 
-                                            onClick={() => handleMergeRequest(stat.id)} 
-                                            className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold hover:bg-green-200 transition"
-                                            title={`Merge ${pendingChangesCount} changes`}
-                                        >
-                                           <PlusCircleIcon />
-                                           <span>Merge ({pendingChangesCount})</span>
-                                        </button>
-                                    )}
-                                    {isProcessing && (
-                                        <div className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1">
-                                            <PendingIcon /> Merging...
-                                        </div>
-                                    )}
-                                </div>
+                                <p className="font-semibold">{stat.name}</p>
                                 <p className="font-bold text-brand-charcoal">{formatCurrency(stat.revenueGenerated)}</p>
                             </div>
                             <div className="flex items-center gap-x-4 text-xs text-gray-500 mt-1">

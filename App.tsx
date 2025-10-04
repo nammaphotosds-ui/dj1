@@ -19,7 +19,6 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
-import SyncWithDataScreen from './components/auth/SyncWithDataScreen';
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
@@ -29,7 +28,6 @@ const AppContent: React.FC = () => {
     isAddDistributorModalOpen, closeAddDistributorModal
   } = useUIContext();
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
-  const [showSyncScreen, setShowSyncScreen] = useState(false);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -44,21 +42,13 @@ const AppContent: React.FC = () => {
       );
   }
   
-  if (showSyncScreen) {
-      return (
-          <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <SyncWithDataScreen onBack={() => setShowSyncScreen(false)} />
-          </div>
-      );
-  }
-
   if (error) {
       return (
            <div className="h-full w-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg flex items-center justify-center p-4">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
                 <h1 className="text-2xl font-bold text-red-700 mb-4">An Error Occurred</h1>
                 <p className="text-red-600 mb-6">{error}</p>
-                <p className="text-gray-600">Please try refreshing the page. If you are an admin, try reconnecting to Google Drive from the settings menu.</p>
+                <p className="text-gray-600">Please check your internet connection and try refreshing the page. Ensure your Supabase configuration is correct.</p>
               </div>
             </div>
       );
@@ -67,7 +57,7 @@ const AppContent: React.FC = () => {
   if (!currentUser) {
       return (
         <div className="h-full font-sans text-brand-charcoal bg-gradient-to-br from-brand-cream to-brand-bg">
-            <LoginFlow onSync={() => setShowSyncScreen(true)} />
+            <LoginFlow />
         </div>
       );
   }
