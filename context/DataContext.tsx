@@ -151,17 +151,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!isAuthInitialized || !currentUser) return;
 
       const handleInventoryChange = (payload: any) => {
-          if (payload.eventType === 'INSERT') setInventory(prev => [...prev, payload.new]);
+          if (payload.eventType === 'INSERT') setInventory(prev => {
+              if (prev.some(i => i.id === payload.new.id)) return prev;
+              return [...prev, payload.new];
+          });
           if (payload.eventType === 'UPDATE') setInventory(prev => prev.map(i => i.id === payload.new.id ? payload.new : i));
           if (payload.eventType === 'DELETE') setInventory(prev => prev.filter(i => i.id !== payload.old.id));
       };
       const handleCustomerChange = (payload: any) => {
-          if (payload.eventType === 'INSERT') setRawCustomers(prev => [...prev, payload.new]);
+          if (payload.eventType === 'INSERT') setRawCustomers(prev => {
+              if (prev.some(c => c.id === payload.new.id)) return prev;
+              return [...prev, payload.new];
+          });
           if (payload.eventType === 'UPDATE') setRawCustomers(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
           if (payload.eventType === 'DELETE') setRawCustomers(prev => prev.filter(c => c.id !== payload.old.id));
       };
       const handleBillChange = (payload: any) => {
-          if (payload.eventType === 'INSERT') setBills(prev => [...prev, payload.new]);
+          if (payload.eventType === 'INSERT') setBills(prev => {
+              if (prev.some(b => b.id === payload.new.id)) return prev;
+              return [...prev, payload.new];
+          });
           if (payload.eventType === 'UPDATE') setBills(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
           if (payload.eventType === 'DELETE') setBills(prev => prev.filter(b => b.id !== payload.old.id));
       };
@@ -231,8 +240,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const maxSerial = Math.max(0, ...categoryItems.map(i => parseInt(i.serialNo, 10) || 0));
     const newSerialNo = (maxSerial + 1).toString().padStart(5, '0');
     const newItem = { ...item, id: `ITEM-${Date.now()}`, serialNo: newSerialNo, dateAdded: new Date().toISOString() };
+    
+    setInventory(prev => [...prev, newItem]); // Optimistic update
+
     const { error } = await supabase.from('inventory').insert(newItem);
-    if (error) throw error;
+
+    if (error) {
+        setInventory(prev => prev.filter(i => i.id !== newItem.id)); // Rollback
+        toast.error(`Failed to add item: ${error.message}`);
+        throw error;
+    }
+    
     await logActivity(`Added inventory item: ${newItem.name} (S/N: ${newItem.serialNo})`);
   };
 
@@ -253,8 +271,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addCustomer = async (customer: Omit<Customer, 'id' | 'joinDate' | 'createdBy' | 'pendingBalance'>) => {
     if (!currentUser) throw new Error("User not logged in");
     const newCustomer = { ...customer, id: getNextCustomerId(), joinDate: new Date().toISOString(), createdBy: currentUser.id };
+    
+    setRawCustomers(prev => [...prev, newCustomer]); // Optimistic update
+    
     const { error } = await supabase.from('customers').insert(newCustomer);
-    if (error) throw error;
+    
+    if (error) {
+        setRawCustomers(prev => prev.filter(c => c.id !== newCustomer.id)); // Rollback
+        toast.error(`Failed to add customer: ${error.message}`);
+        throw error;
+    }
+    
     await logActivity(`Added new customer: ${newCustomer.name}`);
   };
   
@@ -270,7 +297,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createBill = async (billData: Omit<Bill, 'id' | 'date' | 'customerName' | 'finalAmount' | 'netWeight' | 'makingChargeAmount' | 'wastageAmount' | 'sgstAmount' | 'cgstAmount' | 'grandTotal' | 'createdBy'>): Promise<Bill> => {
     if (!currentUser) throw new Error("User not logged in");
     
-    // Bill calculation logic
     const totalGrossWeight = billData.items.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
     const subtotalBeforeLessWeight = billData.totalAmount; 
     const averageRatePerGram = totalGrossWeight > 0 ? subtotalBeforeLessWeight / totalGrossWeight : 0;
@@ -287,7 +313,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const customer = customers.find(c => c.id === billData.customerId);
     if(!customer) throw new Error("Customer not found");
     
-    // Generate Bill ID
     const today = new Date();
     const datePrefix = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
     const { data: todaysBills, error: billCountError } = await supabase.from('bills').select('id').like('id', `${datePrefix}%`);
@@ -299,28 +324,75 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, sgstAmount, cgstAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
     };
 
-    // Apply inventory changes
-    const inventoryUpdates: Promise<any>[] = [];
+    const originalInventory = [...inventory];
+    const inventoryUpdatesMap = new Map<string, { newQuantity: number; newWeight: number }>();
+
     for (const billItem of newBill.items) {
-      const inventoryItem = inventory.find(i => i.id === billItem.itemId);
-      if (!inventoryItem || inventoryItem.quantity < billItem.quantity) {
-        throw new Error(`Not enough stock for ${inventoryItem?.name || billItem.name}.`);
-      }
-      const newQuantity = inventoryItem.quantity - billItem.quantity;
-      inventoryUpdates.push(supabase.from('inventory').update({ quantity: newQuantity }).eq('id', inventoryItem.id));
+        const inventoryItem = originalInventory.find(i => i.id === billItem.itemId);
+        
+        if (!inventoryItem) {
+            throw new Error(`Inventory item for "${billItem.name}" not found.`);
+        }
+        if (inventoryItem.quantity < 1) {
+            throw new Error(`"${inventoryItem.name}" is out of stock.`);
+        }
+
+        const isPartialWeightSaleAttempt = Math.abs(billItem.weight - inventoryItem.weight) > 0.001;
+
+        if (isPartialWeightSaleAttempt && inventoryItem.quantity > 1) {
+            throw new Error(`Cannot sell partial weight from a stock of multiple items (${inventoryItem.name}). Please sell as a full item or adjust inventory first.`);
+        }
+        
+        let newQuantity: number;
+        let newWeight: number;
+        
+        if (isPartialWeightSaleAttempt && inventoryItem.quantity === 1) {
+            // Valid partial weight sale of a unique item.
+            if (billItem.weight > inventoryItem.weight) {
+                throw new Error(`Sell weight (${billItem.weight}g) exceeds stock weight (${inventoryItem.weight}g) for ${inventoryItem.name}.`);
+            }
+            const remainingWeight = inventoryItem.weight - billItem.weight;
+            newWeight = remainingWeight < 0.001 ? 0 : remainingWeight;
+            newQuantity = newWeight === 0 ? 0 : 1;
+        } else {
+            // Standard sale of one or more full items.
+            if (inventoryItem.quantity < billItem.quantity) {
+                throw new Error(`Not enough stock for ${inventoryItem.name}. Available: ${inventoryItem.quantity}, Requested: ${billItem.quantity}.`);
+            }
+            newQuantity = inventoryItem.quantity - billItem.quantity;
+            newWeight = newQuantity > 0 ? inventoryItem.weight : 0;
+        }
+        
+        inventoryUpdatesMap.set(inventoryItem.id, { newQuantity, newWeight });
     }
 
-    await Promise.all(inventoryUpdates);
-    
-    // Insert the bill
-    const { error: insertBillError } = await supabase.from('bills').insert(newBill);
-    if (insertBillError) {
-      // Attempt to revert inventory changes would be ideal here, but is complex client-side.
-      throw insertBillError;
+    setInventory(prev => prev.map(item => {
+        if (inventoryUpdatesMap.has(item.id)) {
+            const updates = inventoryUpdatesMap.get(item.id)!;
+            return { ...item, quantity: updates.newQuantity, weight: updates.newWeight };
+        }
+        return item;
+    }));
+    setBills(prev => [...prev, newBill]);
+
+    try {
+        const inventoryUpdatePromises = Array.from(inventoryUpdatesMap.entries()).map(([id, { newQuantity, newWeight }]) => 
+            supabase.from('inventory').update({ quantity: newQuantity, weight: newWeight }).eq('id', id)
+        );
+        await Promise.all(inventoryUpdatePromises);
+        
+        const { error: insertBillError } = await supabase.from('bills').insert(newBill);
+        if (insertBillError) throw insertBillError;
+
+        await logActivity(`Created ${newBill.type} for ${newBill.customerName} (Total: ₹${newBill.grandTotal.toFixed(2)})`);
+        return newBill;
+    } catch (err) {
+        setInventory(originalInventory);
+        setBills(prev => prev.filter(b => b.id !== newBill.id));
+        const error = err as Error;
+        toast.error(`Failed to create bill: ${error.message}. Changes reverted.`);
+        throw error;
     }
-    
-    await logActivity(`Created ${newBill.type} for ${customer.name} (Total: ₹${grandTotal.toFixed(2)})`);
-    return newBill;
   };
 
   const recordPaymentForBill = async (billId: string, amount: number) => {
