@@ -1,5 +1,5 @@
-// FIX: Import React types for use in global JSX declaration.
-import type React from 'react';
+// FIX: Import React for use in global JSX declaration.
+import React from 'react';
 
 export enum JewelryCategory {
   GOLD = 'Gold',

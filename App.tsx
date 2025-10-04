@@ -22,6 +22,7 @@ import AddStaffForm from './components/forms/AddStaffForm';
 import AddDistributorForm from './components/forms/AddDistributorForm';
 import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
+import CreatorFooter from './components/common/CreatorFooter';
 
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
@@ -155,6 +156,7 @@ const AppContent: React.FC = () => {
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
       />
+      <CreatorFooter withNavBar />
     </div>
   );
 };

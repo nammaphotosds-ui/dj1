@@ -56,7 +56,7 @@ const PinEntryScreen: React.FC<{ onBack: () => void; onSuccess: () => void; }> =
     }
 
     return (
-        <div className="flex flex-col items-center justify-between h-full text-center p-4">
+        <div className="flex flex-col items-center justify-between h-full text-center p-4 pb-10">
             <div className="w-full">
                 <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-24 h-24 object-contain mx-auto mt-8 mb-4"/>
                 <h2 className="text-2xl font-serif text-brand-charcoal mb-2">Enter Admin PIN</h2>

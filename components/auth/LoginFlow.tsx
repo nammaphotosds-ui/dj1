@@ -3,8 +3,10 @@ import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import Logo from '../common/Logo';
 import PinEntryScreen from './PinEntryScreen';
-// FIX: Import UserRole type to ensure global type declarations from types.ts are included.
+// FIX: Side-effect import to ensure global type declarations from types.ts are loaded.
+import '../../types';
 import type { UserRole } from '../../types';
+import CreatorFooter from '../common/CreatorFooter';
 
 export const WelcomeScreen: React.FC = () => (
     <div className="flex h-full w-full items-center justify-center">
@@ -47,7 +49,7 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
     const isLoginDisabled = isLoading || !isInitialStaffListLoaded;
 
     return (
-        <div className="flex flex-col items-center justify-center h-full text-center p-4">
+        <div className="flex flex-col items-center justify-center h-full text-center p-4 pb-10">
             <img src="https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163" alt="Logo" className="w-32 h-32 object-contain mb-4"/>
             <h2 className="text-3xl font-serif text-gray-300 md:text-brand-charcoal mb-2">Staff Login</h2>
             <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
@@ -142,6 +144,7 @@ const LoginFlow: React.FC = () => {
                                 />;
                 }
             })()}
+            <CreatorFooter />
         </>
     )
 }
