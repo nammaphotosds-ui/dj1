@@ -7,12 +7,13 @@ import PinEntryScreen from './PinEntryScreen';
 export const WelcomeScreen: React.FC = () => (
     <div className="flex h-full w-full items-center justify-center">
       <div className="text-center">
-        <div className="relative w-40 h-40 mx-auto mb-8">
-          <div className="absolute inset-0 border-2 border-brand-gold/30 rounded-full animate-ping"></div>
-          <div className="absolute inset-2 border-2 border-brand-gold/50 rounded-full animate-ping [animation-delay:-0.5s]"></div>
-          <Logo simple className="w-40 h-40"/>
-        </div>
-        <h1 className="text-5xl font-serif tracking-wider text-brand-charcoal" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.1)' }}>
+        <dotlottie-wc
+            src="https://lottie.host/218e4d29-9a0a-4a0a-ae44-cb4568650a74/N5SyJV5kwy.json"
+            autoplay
+            loop
+            style={{ width: '300px', height: '300px', margin: '0 auto' }}
+        ></dotlottie-wc>
+        <h1 className="text-5xl font-serif tracking-wider text-brand-charcoal -mt-8" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.1)' }}>
           DEVAGIRIKAR
         </h1>
         <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>

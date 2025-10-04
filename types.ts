@@ -103,3 +103,12 @@ export type CurrentUser = {
   role: 'admin' | 'staff';
   id: string; // 'admin' for admin, staff ID for staff
 };
+
+// FIX: Add global declaration for 'dotlottie-wc' web component to make it available project-wide.
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { src: string; autoplay: boolean; loop: boolean; style?: React.CSSProperties }, HTMLElement>;
+    }
+  }
+}
