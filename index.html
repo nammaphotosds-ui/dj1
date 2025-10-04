@@ -76,6 +76,16 @@
   body {
     background: radial-gradient(circle, #fefbf5, #FAF4E8);
   }
+  .simple-gradient-capsule {
+    background: linear-gradient(145deg, #FFFDD0, #F2D2D4);
+    border: 1px solid #e7c8c9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s ease-in-out;
+  }
+  .simple-gradient-capsule:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
   @keyframes fade-in-up {
     from {
       opacity: 0;
@@ -88,11 +98,6 @@
   }
   .animate-fade-in-up {
     animation: fade-in-up 0.3s ease-out forwards;
-  }
-  .simple-gradient-capsule {
-    background-image: linear-gradient(to bottom right, #FFFDD0, #F2D2D4);
-    border: 1px solid #E0C0C0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.7);
   }
 </style>
 </head>

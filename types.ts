@@ -1,5 +1,5 @@
-// FIX: Import React to provide type definitions for JSX intrinsic elements.
-import type React from 'react';
+// FIX: Changed 'import type React' to 'import React'. This ensures the React namespace is available for JSX intrinsic element augmentation and fixes errors with custom elements like 'dotlottie-wc'.
+import React from 'react';
 
 export enum JewelryCategory {
   GOLD = 'Gold',

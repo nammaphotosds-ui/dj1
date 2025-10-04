@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
 import Logo from '../common/Logo';
 import PinEntryScreen from './PinEntryScreen';
-import type { UserRole } from '../../types';
+// FIX: Changed to a regular import to ensure global JSX type augmentations from '../../types' are applied.
+import { UserRole } from '../../types';
 import CreatorFooter from '../common/CreatorFooter';
 
 export const WelcomeScreen: React.FC = () => (
@@ -76,17 +78,17 @@ const LoginChooserScreen: React.FC<{
                 <h1 className="text-5xl font-serif tracking-wider text-brand-charcoal">DEVAGIRIKAR</h1>
                 <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
             </div>
-            <div className="flex flex-col gap-6 w-full max-w-sm items-center">
+            <div className="flex flex-col gap-4 w-full max-w-xs">
                 <button
                     onClick={() => onSelectRole('admin')}
                     disabled={isLoadingAdmin}
-                    className="relative py-2 px-6 rounded-full text-gray-800 font-serif font-semibold text-base tracking-wider simple-gradient-capsule transition-transform duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300/50 disabled:opacity-60 disabled:cursor-wait"
+                    className="relative py-2 px-6 text-gray-800 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-300 disabled:opacity-60 disabled:cursor-wait simple-gradient-capsule"
                     aria-label="Admin Login"
                 >
                     <span>Admin Login</span>
                     {isLoadingAdmin && (
                         <div className="absolute inset-0 bg-black bg-opacity-30 rounded-full flex items-center justify-center">
-                            <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -95,7 +97,7 @@ const LoginChooserScreen: React.FC<{
                 </button>
                 <button
                     onClick={() => onSelectRole('staff')}
-                    className="py-2 px-6 rounded-full text-gray-800 font-serif font-semibold text-base tracking-wider simple-gradient-capsule transition-transform duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300/50"
+                    className="py-2 px-6 text-gray-800 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-300 simple-gradient-capsule"
                     aria-label="Staff Login"
                 >
                     Staff Login
