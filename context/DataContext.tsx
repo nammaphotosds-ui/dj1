@@ -316,6 +316,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createBill = async (billData: Omit<Bill, 'id' | 'date' | 'customerName' | 'finalAmount' | 'netWeight' | 'makingChargeAmount' | 'wastageAmount' | 'sgstAmount' | 'cgstAmount' | 'grandTotal' | 'createdBy'>): Promise<Bill> => {
     if (!currentUser) throw new Error("User not logged in");
     
+    // Real-time stock validation against the database before proceeding.
+    // This prevents race conditions where a user sells an item with stale data.
+    for (const billItem of billData.items) {
+        const { data: currentItemData, error: fetchError } = await supabase
+            .from('inventory')
+            .select('name, weight, quantity')
+            .eq('id', billItem.itemId)
+            .single();
+
+        if (fetchError || !currentItemData) {
+            throw new Error(`Could not verify stock for "${billItem.name}". The item might have been recently deleted. Please refresh.`);
+        }
+
+        const isPartialSale = currentItemData.quantity === 1 && Math.abs(billItem.weight - currentItemData.weight) > 0.001;
+
+        if (isPartialSale && billItem.weight > currentItemData.weight) {
+             throw new Error(`Stock for "${currentItemData.name}" has changed. Only ${currentItemData.weight.toFixed(3)}g is available. Please refresh and try again.`);
+        }
+
+        if (!isPartialSale && billItem.quantity > currentItemData.quantity) {
+            throw new Error(`Stock for "${currentItemData.name}" has changed. Only ${currentItemData.quantity} unit(s) available. Please refresh and try again.`);
+        }
+    }
+
     const totalGrossWeight = billData.items.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
     const subtotalBeforeLessWeight = billData.totalAmount; 
     const averageRatePerGram = totalGrossWeight > 0 ? subtotalBeforeLessWeight / totalGrossWeight : 0;
