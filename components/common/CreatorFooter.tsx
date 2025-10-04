@@ -8,8 +8,8 @@ const CreatorFooter: React.FC<CreatorFooterProps> = ({ withNavBar = false }) => 
     const [isCardVisible, setIsCardVisible] = useState(false);
 
     const footerClasses = withNavBar 
-        ? "fixed bottom-16 md:bottom-0 left-0 right-0 p-2 text-center text-xs z-30 cursor-pointer"
-        : "fixed bottom-0 left-0 right-0 p-2 text-center text-xs z-30 cursor-pointer";
+        ? "absolute bottom-16 md:bottom-0 left-0 right-0 p-2 text-center text-xs z-30 cursor-pointer"
+        : "absolute bottom-0 left-0 right-0 p-2 text-center text-xs z-30 cursor-pointer";
 
     return (
         <>

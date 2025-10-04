@@ -1,6 +1,5 @@
+
 import React, { useState, useEffect } from 'react';
-// FIX: Side-effect import to ensure global type declarations from types.ts are loaded.
-import './types';
 import { Toaster } from 'react-hot-toast';
 import DashboardPage from './components/DashboardPage';
 import InventoryPage from './components/InventoryPage';
@@ -24,6 +23,8 @@ import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
 import CreatorFooter from './components/common/CreatorFooter';
 
+// FIX: Removed duplicated global declaration for 'dotlottie-wc'. It is now centralized in types.ts.
+
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
   const { isLoading } = useDataContext();
@@ -41,7 +42,7 @@ const AppContent: React.FC = () => {
 
   if (!isInitialized) {
       return (
-        <div className="h-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg">
+        <div className="relative h-full font-sans text-brand-charcoal bg-transparent">
           <WelcomeScreen />
         </div>
       );
@@ -49,7 +50,7 @@ const AppContent: React.FC = () => {
   
   if (error) {
       return (
-           <div className="h-full w-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg flex items-center justify-center p-4">
+           <div className="h-full w-full font-sans text-brand-charcoal bg-transparent flex items-center justify-center p-4">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
                 <h1 className="text-2xl font-bold text-red-700 mb-4">An Error Occurred</h1>
                 <p className="text-red-600 mb-6">{error}</p>
@@ -61,7 +62,7 @@ const AppContent: React.FC = () => {
 
   if (!currentUser) {
       return (
-        <div className="h-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg">
+        <div className="relative h-full font-sans text-brand-charcoal bg-transparent">
             <LoginFlow />
         </div>
       );
@@ -98,7 +99,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="h-full font-sans text-brand-charcoal md:bg-gradient-to-br md:from-brand-cream md:to-brand-bg">
+    <div className="relative h-full font-sans text-brand-charcoal bg-transparent">
       <Toaster position="top-center" reverseOrder={false} />
       
       <Sidebar 
