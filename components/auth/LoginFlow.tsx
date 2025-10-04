@@ -60,7 +60,8 @@ const StaffLoginScreen: React.FC<{onBack: () => void}> = ({onBack}) => {
 
 const LoginChooserScreen: React.FC<{ 
     onSelectRole: (role: 'admin' | 'staff') => void;
-}> = ({ onSelectRole }) => {
+    isLoadingAdmin: boolean;
+}> = ({ onSelectRole, isLoadingAdmin }) => {
      return (
         <div className="flex h-full w-full flex-col items-center justify-center p-8 text-brand-charcoal">
             <div 
@@ -71,7 +72,13 @@ const LoginChooserScreen: React.FC<{
                 <p className="text-2xl text-brand-gold-dark tracking-[0.2em]">JEWELLERYS</p>
             </div>
             <div className="flex flex-col gap-4 w-full max-w-xs">
-                <button onClick={() => onSelectRole('admin')} className="w-full p-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Admin Login</button>
+                <button 
+                    onClick={() => onSelectRole('admin')} 
+                    disabled={isLoadingAdmin} 
+                    className="w-full p-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait"
+                >
+                    {isLoadingAdmin ? 'Loading...' : 'Admin Login'}
+                </button>
                 <button onClick={() => onSelectRole('staff')} className="w-full p-4 bg-brand-gold text-brand-charcoal font-semibold rounded-lg shadow-md hover:bg-brand-gold-dark transition">Staff Login</button>
             </div>
         </div>
@@ -82,11 +89,14 @@ const LoginChooserScreen: React.FC<{
 const LoginFlow: React.FC = () => {
     const { fetchAdminPin, setCurrentUser } = useAuthContext();
     const [loginType, setLoginType] = useState<'chooser' | 'staff' | 'pin'>('chooser');
+    const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
     
-    const handleSelectRole = (role: 'admin' | 'staff') => {
+    const handleSelectRole = async (role: 'admin' | 'staff') => {
         if (role === 'admin') {
-            fetchAdminPin();
+            setIsLoadingAdmin(true);
+            await fetchAdminPin();
             setLoginType('pin');
+            setIsLoadingAdmin(false);
         } else {
             setLoginType('staff');
         }
@@ -108,6 +118,7 @@ const LoginFlow: React.FC = () => {
                     default:
                          return <LoginChooserScreen 
                                     onSelectRole={handleSelectRole} 
+                                    isLoadingAdmin={isLoadingAdmin}
                                 />;
                 }
             })()}

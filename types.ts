@@ -85,28 +85,21 @@ export interface ActivityLog {
     message: string;
 }
 
+// FIX: Add StaffSyncRequest interface to resolve import error. This type defines the shape of sync requests from staff members.
+export interface StaffSyncRequest {
+    id: number;
+    staff_id: string;
+    staff_name: string;
+    data_payload: string;
+    changes_count: number;
+    status: 'pending' | 'merged' | 'rejected';
+    created_at: string;
+}
+
 
 export type Page = 'DASHBOARD' | 'INVENTORY' | 'CUSTOMERS' | 'BILLING' | 'SETTINGS' | 'REPORTS' | 'STAFF_MANAGEMENT' | 'DISTRIBUTOR_MANAGEMENT';
-
-export interface GoogleTokenResponse {
-  access_token: string;
-  expires_in: number;
-  scope: string;
-  token_type: string;
-  expires_at?: number;
-}
 
 export type CurrentUser = {
   role: 'admin' | 'staff';
   id: string; // 'admin' for admin, staff ID for staff
 };
-
-export interface StaffSyncRequest {
-  id: number;
-  created_at: string;
-  staff_id: string;
-  staff_name: string;
-  data_payload: string;
-  status: 'pending' | 'merged' | 'rejected';
-  changes_count: number;
-}
