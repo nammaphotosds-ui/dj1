@@ -70,7 +70,7 @@ export interface Bill {
 export interface Staff {
   id: string; // User-facing ID, e.g., "staff01"
   name: string;
-  passwordHash: string; // Store a hash of the password
+  password: string; // Store raw password
 }
 
 export interface Distributor {

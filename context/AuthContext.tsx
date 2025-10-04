@@ -39,18 +39,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      try {
         const { data, error } = await supabase
             .from('admin_config')
-            .select('pin_hash') // Column name is still pin_hash but stores raw PIN
+            .select('pin')
             .eq('id', 1)
             .single();
 
-        if (error || !data || !data.pin_hash) {
+        if (error || !data || !data.pin) {
             console.warn("No PIN found in Supabase, using default. If this is the first run, this is expected.");
             setAdminPin(DEFAULT_PIN);
             return;
         }
         
         // Stores the raw PIN from the database
-        setAdminPin(data.pin_hash);
+        setAdminPin(data.pin);
 
      } catch (e) {
         console.error("Failed to fetch PIN from Supabase:", e);
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!staffMember) return false;
     
     // Direct password comparison (no hashing)
-    if (trimmedPass === staffMember.passwordHash) {
+    if (trimmedPass === staffMember.password) {
         setCurrentUser({ role: 'staff', id: staffMember.id });
         return true;
     }
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Store the new PIN directly (no hashing)
     const { data, error } = await supabase
         .from('admin_config')
-        .upsert({ id: 1, pin_hash: newPin, updated_at: new Date().toISOString() })
+        .upsert({ id: 1, pin: newPin, updated_at: new Date().toISOString() })
         .select()
         .single();
     
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Store the default PIN directly (no hashing)
     const { error } = await supabase
         .from('admin_config')
-        .update({ pin_hash: DEFAULT_PIN, updated_at: new Date().toISOString() })
+        .update({ pin: DEFAULT_PIN, updated_at: new Date().toISOString() })
         .eq('id', 1);
     
     if (error) {

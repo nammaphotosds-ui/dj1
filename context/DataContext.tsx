@@ -30,7 +30,7 @@ interface DataContextType {
   getInventoryItemById: (id: string) => JewelryItem | undefined;
   getNextCustomerId: () => string;
   resetTransactions: () => Promise<void>;
-  addStaff: (newStaff: Omit<Staff, 'passwordHash'>, password: string) => Promise<void>;
+  addStaff: (newStaff: Omit<Staff, 'password'>, password: string) => Promise<void>;
   updateStaff: (staffId: string, newDetails: { id: string; name: string; password?: string }) => Promise<void>;
   deleteStaff: (staffId: string) => Promise<void>;
   addDistributor: (distributor: Omit<Distributor, 'id'>) => Promise<void>;
@@ -322,7 +322,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await logActivity('Reset all transaction data.');
   };
 
-  const addStaff = async (newStaff: Omit<Staff, 'passwordHash'>, password: string) => {
+  const addStaff = async (newStaff: Omit<Staff, 'password'>, password: string) => {
     if (currentUser?.role !== 'admin') throw new Error("Permission denied");
     const trimmedId = newStaff.id.trim();
     if (!trimmedId) throw new Error("Staff ID cannot be empty.");
@@ -330,7 +330,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error("Staff ID already exists.");
     }
     // Store raw password, no hashing
-    const staffMember: Staff = { ...newStaff, id: trimmedId, passwordHash: password };
+    const staffMember: Staff = { ...newStaff, id: trimmedId, password: password };
     const { error } = await supabase.from('staff').insert(staffMember);
     if (error) throw error;
     await logActivity(`Added new staff member: ${staffMember.name} (${staffMember.id})`);
@@ -344,7 +344,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let updatePayload: Partial<Staff> = { id: newDetails.id, name: newDetails.name };
     if (newDetails.password) {
         // Store raw password, no hashing
-        updatePayload.passwordHash = newDetails.password;
+        updatePayload.password = newDetails.password;
     }
     const { error } = await supabase.from('staff').update(updatePayload).eq('id', staffId);
     if (error) throw error;
