@@ -94,7 +94,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshPendingSyncRequests = useCallback(async () => {
     if (currentUser?.role !== 'admin') {
-      if (pendingSyncRequests.length > 0) setPendingSyncRequests([]);
+      setPendingSyncRequests([]);
       return;
     }
     try {
@@ -109,7 +109,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Failed to fetch sync requests:', e);
       toast.error('Could not fetch pending staff sync requests.');
     }
-  }, [currentUser?.role, pendingSyncRequests.length]);
+  }, [currentUser?.role]);
 
 
   // Activity Logger
@@ -298,13 +298,98 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (isAuthInitialized) {
         initData();
     }
-  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser, refreshPendingSyncRequests, loadAndSetData]);
+  }, [isAuthInitialized, tokenResponse, currentUser?.role, setDriveFileId, setCurrentUser, refreshPendingSyncRequests, loadAndSetData, setStaffChanges]);
 
    useEffect(() => {
     if (isAuthInitialized && currentUser?.role === 'staff') {
       refreshDataFromAdmin(true);
     }
   }, [isAuthInitialized, currentUser?.role, refreshDataFromAdmin]);
+
+  const applyBillToInventory = useCallback(
+    (
+      currentInventory: JewelryItem[],
+      bill: { items: BillItem[] }
+    ): { updatedInventory: JewelryItem[]; errors: string[] } => {
+      const inventoryMap = new Map<string, JewelryItem>(
+        currentInventory.map((i) => [i.id, { ...i }])
+      );
+      const newItemsToAdd: JewelryItem[] = [];
+      const errors: string[] = [];
+
+      for (const billItem of bill.items) {
+        const inventoryItem = inventoryMap.get(billItem.itemId);
+
+        if (!inventoryItem || inventoryItem.quantity < billItem.quantity) {
+          errors.push(
+            `Not enough stock for ${inventoryItem?.name || billItem.name}.`
+          );
+          continue;
+        }
+
+        if (inventoryItem.quantity === 1) {
+          if (billItem.weight > inventoryItem.weight + 0.001) {
+            errors.push(
+              `Sell weight for ${inventoryItem.name} exceeds stock weight.`
+            );
+            continue;
+          }
+          const remainingWeight = inventoryItem.weight - billItem.weight;
+          if (remainingWeight < 0.001) {
+            inventoryItem.quantity = 0;
+            inventoryItem.weight = 0;
+          } else {
+            inventoryItem.weight = remainingWeight;
+          }
+        }
+        else if (inventoryItem.quantity > 1) {
+          inventoryItem.quantity -= billItem.quantity;
+          
+          const weightDifference = inventoryItem.weight - billItem.weight;
+
+          if (billItem.quantity === 1 && weightDifference > 0.001) {
+            const allCurrentItems = [
+              ...Array.from(inventoryMap.values()),
+              ...newItemsToAdd,
+            ];
+            const categoryItems = allCurrentItems.filter(
+              (i) => i.category === inventoryItem.category
+            );
+            const maxSerial = Math.max(
+              0,
+              ...categoryItems.map((i) => {
+                const serial = parseInt(i.serialNo, 10);
+                return isNaN(serial) ? 0 : serial;
+              })
+            );
+            const newSerialNo = (maxSerial + 1).toString().padStart(5, '0');
+
+            const remnantItem: JewelryItem = {
+              ...inventoryItem,
+              id: `ITEM-${Date.now()}-${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
+              serialNo: newSerialNo,
+              name: `${inventoryItem.name} (Remnant)`,
+              weight: weightDifference,
+              quantity: 1,
+            };
+            newItemsToAdd.push(remnantItem);
+          }
+        }
+        inventoryMap.set(inventoryItem.id, inventoryItem);
+      }
+
+      return {
+        updatedInventory: [
+          ...Array.from(inventoryMap.values()),
+          ...newItemsToAdd,
+        ],
+        errors,
+      };
+    },
+    []
+  );
 
   const getNextCustomerId = () => {
       const allCustomers = [...rawCustomers, ...staffChanges.customers];
@@ -416,67 +501,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, sgstAmount, cgstAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
     };
 
-    // Update inventory for all bill types (INVOICE and ESTIMATE). Correctly deducts weight for all items.
     setInventory(prevInventory => {
-      const inventoryMap = new Map<string, JewelryItem>(
-          prevInventory.map(i => [i.id, { ...i }])
-      );
-      const newItemsToAdd: JewelryItem[] = [];
-
-      for (const billItem of billData.items) {
-          const inventoryItem = inventoryMap.get(billItem.itemId);
-
-          if (!inventoryItem || inventoryItem.quantity < billItem.quantity) {
-              toast.error(`Not enough stock for ${inventoryItem?.name || billItem.name}.`);
-              continue;
-          }
-
-          // Case 1: Selling a single item from a unique stock item (quantity = 1)
-          if (inventoryItem.quantity === 1) {
-              if (billItem.weight > inventoryItem.weight) {
-                  toast.error(`Sell weight for ${inventoryItem.name} exceeds stock weight.`);
-                  continue;
-              }
-              const remainingWeight = inventoryItem.weight - billItem.weight;
-              if (remainingWeight < 0.001) { // Considered fully sold
-                  inventoryItem.quantity = 0;
-                  inventoryItem.weight = 0;
-              } else { // Partially sold, update weight
-                  inventoryItem.weight = remainingWeight;
-              }
-          } 
-          // Case 2: Selling from a multi-quantity stock item
-          else if (inventoryItem.quantity > 1) {
-              // Since UI only allows selling one unit at a time when weight is editable,
-              // we assume billItem.quantity is 1 for partial sales.
-              inventoryItem.quantity = inventoryItem.quantity - billItem.quantity;
-              
-              const weightDifference = inventoryItem.weight - billItem.weight;
-
-              // If a partial weight was sold from one unit, create a remnant.
-              if (billItem.quantity === 1 && weightDifference > 0.001) {
-                  const allCurrentItems = [...Array.from(inventoryMap.values()), ...newItemsToAdd];
-                  const categoryItems = allCurrentItems.filter(i => i.category === inventoryItem.category);
-                  const maxSerial = Math.max(0, ...categoryItems.map(i => {
-                      const serial = parseInt(i.serialNo, 10);
-                      return isNaN(serial) ? 0 : serial;
-                  }));
-                  const newSerialNo = (maxSerial + 1).toString().padStart(5, '0');
-
-                  const remnantItem: JewelryItem = {
-                      ...inventoryItem,
-                      id: `ITEM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                      serialNo: newSerialNo,
-                      name: `${inventoryItem.name} (Remnant)`,
-                      weight: weightDifference,
-                      quantity: 1,
-                  };
-                  newItemsToAdd.push(remnantItem);
-              }
-          }
-          inventoryMap.set(inventoryItem.id, inventoryItem);
+      const { updatedInventory, errors } = applyBillToInventory(prevInventory, newBill);
+      if (errors.length > 0) {
+        toast.error(errors.join('\n'));
       }
-      return [...Array.from(inventoryMap.values()), ...newItemsToAdd];
+      return updatedInventory;
     });
 
     if (currentUser.role === 'staff') {
@@ -531,7 +561,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (amountToApply > 0.01) {
-            // FIX: Replaced `toast.warn` with `toast.error` as `warn` is not a valid method.
             toast.error(`Overpayment of ₹${amountToApply.toFixed(2)} could not be applied as all dues are cleared.`);
         }
         
@@ -627,7 +656,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // --- New Sync Back Logic ---
   const getStaffChangesPayload = (): { payload: string; changesCount: number } => {
     if (currentUser?.role !== 'staff') {
       throw new Error("Only staff can generate a changes payload.");
@@ -654,32 +682,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const jsonString = atob(payload);
     const changes = JSON.parse(jsonString);
     
-    const newCustomers = changes.customers || [];
-    const newBills = changes.bills || [];
+    const newCustomers: Omit<Customer, 'pendingBalance'>[] = changes.customers || [];
+    const newBills: Bill[] = changes.bills || [];
 
-    // Merge Customers
-    const uniqueNewCustomers = newCustomers.filter((c: Omit<Customer, 'pendingBalance'>) => !rawCustomers.some(rc => rc.id === c.id || rc.phone === c.phone));
+    const uniqueNewCustomers = newCustomers.filter((c) => !rawCustomers.some(rc => rc.id === c.id || rc.phone === c.phone));
     setRawCustomers(prev => [...prev, ...uniqueNewCustomers]);
 
-    // Merge Bills
-    const uniqueNewBills = newBills.filter((b: Bill) => !bills.some(rb => rb.id === b.id));
+    const uniqueNewBills = newBills.filter((b) => !bills.some(rb => rb.id === b.id));
     setBills(prev => [...prev, ...uniqueNewBills].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
-    // Update inventory for new invoices
     setInventory(prevInventory => {
-      const inventoryMap = new Map<string, JewelryItem>(prevInventory.map(i => [i.id, i]));
+      let currentInventory = [...prevInventory];
       for (const bill of uniqueNewBills) {
-          if (bill.type === BillType.INVOICE) {
-            for (const billItem of bill.items) {
-                const item = inventoryMap.get(billItem.itemId);
-                if (item) {
-                    const updatedItem = { ...item, quantity: Math.max(0, item.quantity - billItem.quantity) };
-                    inventoryMap.set(item.id, updatedItem);
-                }
-            }
-          }
+        const { updatedInventory: nextInventoryState, errors } = applyBillToInventory(
+          currentInventory,
+          bill
+        );
+        if (errors.length > 0) {
+          toast.error(
+            `Inventory merge conflict for staff bill ${bill.id}: ${errors.join(
+              ', '
+            )}. Inventory may be inaccurate.`
+          );
+        }
+        currentInventory = nextInventoryState;
       }
-      return Array.from(inventoryMap.values());
+      return currentInventory;
     });
 
     logActivity(`Merged data from staff: ${uniqueNewCustomers.length} customers, ${uniqueNewBills.length} bills.`);
