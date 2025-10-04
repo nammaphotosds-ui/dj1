@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import DashboardPage from './components/DashboardPage';
@@ -23,8 +22,6 @@ import Sidebar from './components/Sidebar';
 import BottomNavBar from './components/navigation/BottomNavBar';
 import CreatorFooter from './components/common/CreatorFooter';
 
-// FIX: Removed duplicated global declaration for 'dotlottie-wc'. It is now centralized in types.ts.
-
 const AppContent: React.FC = () => {
   const { isInitialized, currentUser, error, setCurrentUser } = useAuthContext();
   const { isLoading } = useDataContext();
@@ -44,6 +41,7 @@ const AppContent: React.FC = () => {
       return (
         <div className="relative h-full font-sans text-brand-charcoal bg-transparent">
           <WelcomeScreen />
+          <CreatorFooter />
         </div>
       );
   }
@@ -157,7 +155,7 @@ const AppContent: React.FC = () => {
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
       />
-      <CreatorFooter withNavBar />
+      {(currentPage === 'INVENTORY' || currentPage === 'SETTINGS') && <CreatorFooter withNavBar />}
     </div>
   );
 };

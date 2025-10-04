@@ -106,6 +106,13 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
             filtered = filtered.filter(item => new Date(item.dateAdded) <= end);
         }
         return filtered.sort((a, b) => {
+            if (sortConfig.key === 'totalWeight') {
+                const aVal = a.weight * a.quantity;
+                const bVal = b.weight * b.quantity;
+                if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            }
             const aVal = a[sortConfig.key as keyof JewelryItem];
             const bVal = b[sortConfig.key as keyof JewelryItem];
             if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -172,8 +179,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
               'Item Name': item.name,
               'Serial No': item.serialNo,
               'Category': item.category,
-              'Weight (g)': item.weight,
+              'Unit Weight (g)': item.weight,
               'Quantity': item.quantity,
+              'Total Weight (g)': item.weight * item.quantity,
               'Date Added': new Date(item.dateAdded).toLocaleDateString()
             }));
             sheetName = 'Distribution Report';
@@ -281,8 +289,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                     <tr className="border-b">
                                         <th className="p-3 cursor-pointer" onClick={() => handleSort('distributorId')}>Distributor <SortIndicator columnKey="distributorId"/></th>
                                         <th className="p-3 cursor-pointer" onClick={() => handleSort('name')}>Item Name <SortIndicator columnKey="name"/></th>
-                                        <th className="p-3 cursor-pointer hidden md:table-cell" onClick={() => handleSort('weight')}>Weight (g) <SortIndicator columnKey="weight"/></th>
+                                        <th className="p-3 cursor-pointer hidden md:table-cell" onClick={() => handleSort('weight')}>Unit Wt. (g) <SortIndicator columnKey="weight"/></th>
                                         <th className="p-3 cursor-pointer text-right" onClick={() => handleSort('quantity')}>Qty <SortIndicator columnKey="quantity"/></th>
+                                        <th className="p-3 cursor-pointer text-right" onClick={() => handleSort('totalWeight')}>Total Wt. (g) <SortIndicator columnKey="totalWeight"/></th>
                                         <th className="p-3 cursor-pointer" onClick={() => handleSort('dateAdded')}>Date Added <SortIndicator columnKey="dateAdded"/></th>
                                     </tr>
                                 </thead>
@@ -293,6 +302,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                             <td className="p-3">{item.name}</td>
                                             <td className="p-3 hidden md:table-cell">{item.weight.toFixed(3)}</td>
                                             <td className="p-3 text-right">{item.quantity}</td>
+                                            <td className="p-3 text-right font-medium">{(item.weight * item.quantity).toFixed(3)}</td>
                                             <td className="p-3 text-sm text-gray-600">{new Date(item.dateAdded).toLocaleDateString()}</td>
                                         </tr>
                                     ))}

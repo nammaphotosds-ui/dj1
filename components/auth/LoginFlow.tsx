@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthContext } from '../../context/AuthContext';
 import { useDataContext } from '../../context/DataContext';
@@ -6,8 +5,6 @@ import Logo from '../common/Logo';
 import PinEntryScreen from './PinEntryScreen';
 import type { UserRole } from '../../types';
 import CreatorFooter from '../common/CreatorFooter';
-
-// FIX: Removed duplicated global declaration for 'dotlottie-wc'. It is now centralized in types.ts.
 
 export const WelcomeScreen: React.FC = () => (
     <div className="flex h-full w-full items-center justify-center">
@@ -83,7 +80,7 @@ const LoginChooserScreen: React.FC<{
                 <button
                     onClick={() => onSelectRole('admin')}
                     disabled={isLoadingAdmin}
-                    className="relative w-full py-4 px-8 rounded-full text-white font-serif font-bold text-xl tracking-wider diamond-gradient-button transition-transform duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300/50 disabled:opacity-60 disabled:cursor-wait"
+                    className="relative py-2 px-6 rounded-full text-gray-800 font-serif font-semibold text-base tracking-wider simple-gradient-capsule transition-transform duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300/50 disabled:opacity-60 disabled:cursor-wait"
                     aria-label="Admin Login"
                 >
                     <span>Admin Login</span>
@@ -98,7 +95,7 @@ const LoginChooserScreen: React.FC<{
                 </button>
                 <button
                     onClick={() => onSelectRole('staff')}
-                    className="w-full py-4 px-8 rounded-full text-white font-serif font-bold text-xl tracking-wider diamond-gradient-button transition-transform duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300/50"
+                    className="py-2 px-6 rounded-full text-gray-800 font-serif font-semibold text-base tracking-wider simple-gradient-capsule transition-transform duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300/50"
                     aria-label="Staff Login"
                 >
                     Staff Login
