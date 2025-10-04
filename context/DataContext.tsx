@@ -45,6 +45,7 @@ interface DataContextType {
   refreshPendingSyncRequests: () => Promise<void>;
   mergeStaffData: (payload: string) => Promise<{ customersAdded: number; billsAdded: number; }>;
   refreshDataFromAdmin: (silent?: boolean) => Promise<void>;
+  forceSaveAdminData: () => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -416,6 +417,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     },
     []
   );
+  
+  const forceSaveAdminData = async () => {
+    if (currentUser?.role !== 'admin') {
+        toast.error("Only admins can save data.");
+        return;
+    }
+
+    const toastId = toast.loading('Saving data & syncing for staff...');
+
+    // First, save to Google Drive (mimicking part of the useEffect logic)
+    if (!driveFileId || !tokenResponse || !tokenResponse.access_token) {
+        toast.error('Google Drive connection not found. Cannot save.', { id: toastId });
+        return;
+    }
+    try {
+        const dataToSaveForDrive = { inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile };
+        await drive.updateFile(tokenResponse.access_token, driveFileId, dataToSaveForDrive);
+        localStorage.setItem('appDataCache', JSON.stringify(dataToSaveForDrive));
+    } catch (e) {
+        console.error("Failed to save data to drive", e);
+        toast.error("Failed to save data to Google Drive.", { id: toastId });
+        return; // Stop if drive save fails
+    }
+
+    // Then, save to Supabase
+    const lastUpdated = new Date().toISOString();
+    const dataToSaveForSupabase = { 
+      _metadata: { lastUpdated },
+      inventory, customers: rawCustomers, bills, staff, distributors, activityLogs, adminProfile 
+    };
+
+    const { error } = await supabase
+      .from('master_data')
+      .upsert({ id: 1, data_payload: dataToSaveForSupabase, updated_at: lastUpdated });
+
+    if (error) {
+      console.error('Failed to upload master data to Supabase:', error);
+      toast.error('Failed to save data for staff sync.', { id: toastId });
+    } else {
+      toast.success('Data saved and available for staff to sync.', { id: toastId });
+    }
+  };
 
   const getNextCustomerId = () => {
       const allCustomers = [...rawCustomers, ...staffChanges.customers];
@@ -720,7 +763,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInventory(prevInventory => {
       let currentInventory = [...prevInventory];
       for (const bill of uniqueNewBills) {
-        if (bill.type === BillType.INVOICE) { // Deduct inventory for invoices
+        if (bill.type === BillType.INVOICE || bill.type === BillType.ESTIMATE) { // Deduct inventory for invoices and estimates from staff
             const { updatedInventory: nextInventoryState, errors } = applyBillToInventory(
                 currentInventory,
                 bill
@@ -772,7 +815,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getInventoryItemById = (id: string) => inventory.find(i => i.id === id);
 
   return (
-    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData, refreshDataFromAdmin }}>
+    <DataContext.Provider value={{ inventory, customers, rawCustomers, bills, staff, distributors, activityLogs, adminProfile, userNameMap, updateAdminName, addInventoryItem, updateInventoryItem, deleteInventoryItem, addCustomer, deleteCustomer, createBill, getCustomerById, getBillsByCustomerId, getInventoryItemById, getNextCustomerId, resetTransactions, addStaff, updateStaff, deleteStaff, addDistributor, deleteDistributor, recordPaymentForBill, recordPayment, getSyncDataPayload, getStaffChangesPayload, clearStaffChanges, pendingSyncRequests, processSyncRequest, refreshPendingSyncRequests, mergeStaffData, refreshDataFromAdmin, forceSaveAdminData }}>
       {children}
     </DataContext.Provider>
   );

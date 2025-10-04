@@ -32,14 +32,20 @@ const MoreMenu: React.FC<{
     onClose: () => void;
     onOpenStaffSync: () => void;
 }> = ({ currentUser, setCurrentPage, onLogout, onClose, onOpenStaffSync }) => {
-    const { refreshDataFromAdmin } = useDataContext();
+    const { refreshDataFromAdmin, forceSaveAdminData } = useDataContext();
 
     const handleRefresh = () => {
         refreshDataFromAdmin();
         onClose();
     };
     
+    const handleForceSave = () => {
+        forceSaveAdminData();
+        onClose();
+    };
+
     const adminNavItems = [
+        { label: 'Save & Sync Data', icon: <UploadIcon />, action: handleForceSave },
         { label: 'Manage Staff', icon: <StaffIcon />, page: 'STAFF_MANAGEMENT' as Page, action: () => handleNav('STAFF_MANAGEMENT') },
         { label: 'Manage Distributors', icon: <DistributorIcon />, page: 'DISTRIBUTOR_MANAGEMENT' as Page, action: () => handleNav('DISTRIBUTOR_MANAGEMENT') },
         { label: 'Settings', icon: <SettingsIcon />, page: 'SETTINGS' as Page, action: () => handleNav('SETTINGS') },
