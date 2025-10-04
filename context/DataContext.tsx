@@ -24,7 +24,7 @@ interface DataContextType {
   deleteInventoryItem: (itemId: string) => Promise<void>;
   addCustomer: (customer: Omit<Customer, 'id' | 'joinDate' | 'createdBy' | 'pendingBalance'>) => Promise<void>;
   deleteCustomer: (customerId: string) => Promise<void>;
-  createBill: (bill: Omit<Bill, 'id' | 'date' | 'customerName' | 'finalAmount' | 'netWeight' | 'makingChargeAmount' | 'wastageAmount' | 'grandTotal' | 'createdBy'>) => Promise<Bill>;
+  createBill: (bill: Omit<Bill, 'id' | 'date' | 'customerName' | 'finalAmount' | 'netWeight' | 'makingChargeAmount' | 'wastageAmount' | 'sgstAmount' | 'cgstAmount' | 'grandTotal' | 'createdBy'>) => Promise<Bill>;
   getCustomerById: (id: string) => Customer | undefined;
   getBillsByCustomerId: (id: string) => Bill[];
   getInventoryItemById: (id: string) => JewelryItem | undefined;
@@ -312,7 +312,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (customerToDelete) logActivity(`Deleted customer: ${customerToDelete.name}`);
   };
 
-  const createBill = async (billData: Omit<Bill, 'id' | 'date' | 'customerName' | 'finalAmount' | 'netWeight' | 'makingChargeAmount' | 'wastageAmount' | 'grandTotal' | 'createdBy'>): Promise<Bill> => {
+  const createBill = async (billData: Omit<Bill, 'id' | 'date' | 'customerName' | 'finalAmount' | 'netWeight' | 'makingChargeAmount' | 'wastageAmount' | 'sgstAmount' | 'cgstAmount' | 'grandTotal' | 'createdBy'>): Promise<Bill> => {
     if (!currentUser) throw new Error("User not logged in");
     const totalGrossWeight = billData.items.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
     const subtotalBeforeLessWeight = billData.totalAmount; 
@@ -321,7 +321,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const finalAmount = subtotalBeforeLessWeight - lessWeightValue;
     const makingChargeAmount = finalAmount * (billData.makingChargePercentage / 100);
     const wastageAmount = finalAmount * (billData.wastagePercentage / 100);
-    const grandTotal = finalAmount + makingChargeAmount + wastageAmount - billData.bargainedAmount;
+
+    const taxableAmount = finalAmount + makingChargeAmount + wastageAmount;
+    const sgstAmount = taxableAmount * (billData.sgstPercentage / 100);
+    const cgstAmount = taxableAmount * (billData.cgstPercentage / 100);
+    const grandTotal = taxableAmount + sgstAmount + cgstAmount - billData.bargainedAmount;
+    
     const amountPaid = billData.amountPaid;
     const netWeight = totalGrossWeight - billData.lessWeight;
     const customer = customers.find(c => c.id === billData.customerId);
@@ -348,7 +353,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const newBillId = `${datePrefix}${nextSeq}`;
 
     const newBill: Bill = {
-      ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
+      ...billData, id: newBillId, customerName: customer.name, finalAmount, netWeight, makingChargeAmount, wastageAmount, sgstAmount, cgstAmount, grandTotal, amountPaid, date: new Date().toISOString(), createdBy: currentUser.id,
     };
 
     // Update inventory for all bill types (INVOICE and ESTIMATE). Correctly deducts weight for all items.

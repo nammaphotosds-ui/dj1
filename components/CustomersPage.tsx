@@ -45,7 +45,7 @@ const numberToWords = (num: number): string => {
 
 const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, customer}) => {
     const totalGrossWeight = bill.items.reduce((sum, item) => sum + (item.weight * (item.quantity || 1)), 0);
-    const { grandTotal, netWeight, makingChargeAmount, wastageAmount, bargainedAmount, finalAmount, amountPaid } = bill;
+    const { grandTotal, netWeight, makingChargeAmount, wastageAmount, bargainedAmount, finalAmount, amountPaid, sgstPercentage, sgstAmount, cgstPercentage, cgstAmount } = bill;
     const logoUrl = "https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163";
 
     const isCompact = bill.items.length > 8;
@@ -137,6 +137,8 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     <div className="flex justify-between"><span>Subtotal:</span><span>₹{finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                                     {makingChargeAmount > 0 && <div className="flex justify-between"><span>Making Charges ({bill.makingChargePercentage}%):</span><span>+ ₹{makingChargeAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {wastageAmount > 0 && <div className="flex justify-between"><span>Wastage ({bill.wastagePercentage}%):</span><span>+ ₹{wastageAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
+                                    {sgstAmount > 0 && <div className="flex justify-between"><span>SGST ({sgstPercentage}%):</span><span>+ ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
+                                    {cgstAmount > 0 && <div className="flex justify-between"><span>CGST ({cgstPercentage}%):</span><span>+ ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {bargainedAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount:</span><span>- ₹{bargainedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     <div className="flex justify-between text-base mt-1 pt-1 border-t-2 border-brand-charcoal">
                                         <span className="font-bold">Grand Total:</span>

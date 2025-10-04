@@ -41,7 +41,7 @@ const numberToWords = (num: number): string => {
 // This is the template that will be rendered for PDF generation
 const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, customer}) => {
     const totalGrossWeight = bill.items.reduce((sum, item) => sum + (item.weight * (item.quantity || 1)), 0);
-    const { grandTotal, netWeight, makingChargeAmount, wastageAmount, bargainedAmount, finalAmount, amountPaid } = bill;
+    const { grandTotal, netWeight, makingChargeAmount, wastageAmount, bargainedAmount, finalAmount, amountPaid, sgstPercentage, sgstAmount, cgstPercentage, cgstAmount } = bill;
     const logoUrl = "https://ik.imagekit.io/9y4qtxuo0/IMG_20250927_202057_913.png?updatedAt=1758984948163";
 
     const isCompact = bill.items.length > 8;
@@ -144,6 +144,8 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     <div className="flex justify-between"><span>Subtotal:</span><span>₹{finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                                     {makingChargeAmount > 0 && <div className="flex justify-between"><span>Making Charges ({bill.makingChargePercentage}%):</span><span>+ ₹{makingChargeAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {wastageAmount > 0 && <div className="flex justify-between"><span>Wastage ({bill.wastagePercentage}%):</span><span>+ ₹{wastageAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
+                                    {sgstAmount > 0 && <div className="flex justify-between"><span>SGST ({sgstPercentage}%):</span><span>+ ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
+                                    {cgstAmount > 0 && <div className="flex justify-between"><span>CGST ({cgstPercentage}%):</span><span>+ ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {bargainedAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount:</span><span>- ₹{bargainedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     <div className="flex justify-between text-base mt-1 pt-1 border-t-2 border-brand-charcoal">
                                         <span className="font-bold">Grand Total:</span>
@@ -271,6 +273,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [lessWeight, setLessWeight] = useState('');
   const [makingChargePercentage, setMakingChargePercentage] = useState('');
   const [wastagePercentage, setWastagePercentage] = useState('');
+  const [sgstPercentage, setSgstPercentage] = useState('');
+  const [cgstPercentage, setCgstPercentage] = useState('');
   const [goldRatePer10g, setGoldRatePer10g] = useState('');
   const [silverRatePer10g, setSilverRatePer10g] = useState('');
   const [platinumRatePer10g, setPlatinumRatePer10g] = useState('');
@@ -308,8 +312,14 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     const makingChargeAmount = actualSubtotal * (mcp / 100);
     const wastageAmount = actualSubtotal * (wp / 100);
 
+    const taxableAmount = actualSubtotal + makingChargeAmount + wastageAmount;
+    const sgstP = parseFloat(sgstPercentage) || 0;
+    const cgstP = parseFloat(cgstPercentage) || 0;
+    const sgstAmount = taxableAmount * (sgstP / 100);
+    const cgstAmount = taxableAmount * (cgstP / 100);
+
     const ba = parseFloat(bargainedAmount) || 0;
-    const grandTotal = actualSubtotal + makingChargeAmount + wastageAmount - ba;
+    const grandTotal = taxableAmount + sgstAmount + cgstAmount - ba;
 
     const netWeight = totalWeight - lw;
 
@@ -319,11 +329,13 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         actualSubtotal,
         makingChargeAmount,
         wastageAmount,
+        sgstAmount,
+        cgstAmount,
         grandTotal, 
         totalWeight, 
         netWeight 
     };
-  }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight]);
+  }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight, sgstPercentage, cgstPercentage]);
 
   const updatePricesForCategory = (category: JewelryCategory, rateStr: string, itemsToUpdate: BillItem[]) => {
     const rate = parseFloat(rateStr);
@@ -525,6 +537,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setLessWeight('');
     setMakingChargePercentage('');
     setWastagePercentage('');
+    setSgstPercentage('');
+    setCgstPercentage('');
     setBillType(BillType.ESTIMATE);
     setSubmissionStatus('idle');
     setGoldRatePer10g('');
@@ -571,6 +585,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
           lessWeight: parseFloat(lessWeight) || 0,
           makingChargePercentage: parseFloat(makingChargePercentage) || 0,
           wastagePercentage: parseFloat(wastagePercentage) || 0,
+          sgstPercentage: parseFloat(sgstPercentage) || 0,
+          cgstPercentage: parseFloat(cgstPercentage) || 0,
           amountPaid: calculations.grandTotal, // All bills are fully paid
         });
         
@@ -756,6 +772,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                     <div className="flex justify-between font-semibold border-t pt-1 mt-1"><span>Net Amount:</span><span>₹{calculations.actualSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                     <div className="flex justify-between"><span>Making Charges ({(parseFloat(makingChargePercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.makingChargeAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                     <div className="flex justify-between"><span>Wastage ({(parseFloat(wastagePercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.wastageAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                    <div className="flex justify-between"><span>SGST ({(parseFloat(sgstPercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.sgstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                    <div className="flex justify-between"><span>CGST ({(parseFloat(cgstPercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.cgstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                     <div className="flex justify-between"><span>Discount:</span><span className="text-green-600">- ₹{(parseFloat(bargainedAmount) || 0).toLocaleString('en-IN')}</span></div>
                     <div className="flex justify-between font-bold text-lg border-t-2 border-brand-charcoal pt-2 mt-2"><span>Grand Total:</span><span className="text-brand-gold-dark">₹{calculations.grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                     <div className="space-y-2 mt-4 pt-4 border-t">
@@ -777,6 +795,16 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                             <div>
                                 <label htmlFor="wastagePercentage" className="block text-xs font-medium text-gray-600">Wastage (%)</label>
                                 <input id="wastagePercentage" type="number" value={wastagePercentage} onChange={e => setWastagePercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 3" step="0.01" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="sgstPercentage" className="block text-xs font-medium text-gray-600">SGST (%)</label>
+                                <input id="sgstPercentage" type="number" value={sgstPercentage} onChange={e => setSgstPercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 1.5" step="0.01" />
+                            </div>
+                            <div>
+                                <label htmlFor="cgstPercentage" className="block text-xs font-medium text-gray-600">CGST (%)</label>
+                                <input id="cgstPercentage" type="number" value={cgstPercentage} onChange={e => setCgstPercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 1.5" step="0.01" />
                             </div>
                         </div>
                         <div className="flex items-center gap-4 pt-2">

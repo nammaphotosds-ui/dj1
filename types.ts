@@ -57,7 +57,11 @@ export interface Bill {
   wastagePercentage: number;
   makingChargeAmount: number;
   wastageAmount: number;
-  grandTotal: number; // finalAmount + makingChargeAmount + wastageAmount - bargainedAmount
+  sgstPercentage: number;
+  cgstPercentage: number;
+  sgstAmount: number;
+  cgstAmount: number;
+  grandTotal: number; // finalAmount + makingChargeAmount + wastageAmount + sgstAmount + cgstAmount - bargainedAmount
   amountPaid: number; // Should be equal to grandTotal
   date: string;
   createdBy: string; // 'admin' or staff ID
