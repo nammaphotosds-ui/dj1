@@ -284,6 +284,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [showPlatinumRateInput, setShowPlatinumRateInput] = useState(false);
   
   const [lockedCategory, setLockedCategory] = useState<JewelryCategory | null>(null);
+  const [weightInputs, setWeightInputs] = useState<Record<string, string>>({});
 
   const selectedCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId);
@@ -436,32 +437,39 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   };
 
   const handleItemWeightChange = (index: number, newWeightStr: string) => {
-    const newWeight = parseFloat(newWeightStr);
-    const weight = isNaN(newWeight) || newWeight < 0 ? 0 : newWeight;
+    if (!/^\d*\.?\d*$/.test(newWeightStr)) {
+        return;
+    }
+
+    const itemToUpdate = selectedItems[index];
+    if (!itemToUpdate) return;
+    const inventoryItem = inventory.find(i => i.id === itemToUpdate.itemId);
+    if (!inventoryItem) return;
+
+    let cappedWeightStr = newWeightStr;
+    const numericValue = parseFloat(newWeightStr);
+    if (!isNaN(numericValue) && numericValue > inventoryItem.weight) {
+        cappedWeightStr = String(inventoryItem.weight);
+        toast.error(`Sell weight cannot exceed stock weight of ${inventoryItem.weight}g.`, { duration: 2000 });
+    }
+
+    setWeightInputs(prev => ({ ...prev, [itemToUpdate.itemId]: cappedWeightStr }));
+
+    const finalNumericWeight = parseFloat(cappedWeightStr) || 0;
 
     setSelectedItems(prevItems => {
         const newItems = [...prevItems];
-        const itemToUpdate = newItems[index];
-        const inventoryItem = inventory.find(i => i.id === itemToUpdate.itemId);
-
-        if (!inventoryItem) return prevItems;
-        
-        let finalWeight = weight;
-        if (weight > inventoryItem.weight) {
-            toast.error(`Sell weight cannot exceed stock weight of ${inventoryItem.weight}g.`, { duration: 2000 });
-            finalWeight = inventoryItem.weight;
-        }
         
         let ratePer10g = 0;
         if (inventoryItem.category === JewelryCategory.GOLD) ratePer10g = parseFloat(goldRatePer10g) || 0;
         else if (inventoryItem.category === JewelryCategory.SILVER) ratePer10g = parseFloat(silverRatePer10g) || 0;
         else if (inventoryItem.category === JewelryCategory.PLATINUM) ratePer10g = parseFloat(platinumRatePer10g) || 0;
         
-        const newPrice = ratePer10g > 0 ? (finalWeight / 10) * ratePer10g : 0;
+        const newPrice = ratePer10g > 0 ? (finalNumericWeight / 10) * ratePer10g : 0;
 
         newItems[index] = {
             ...itemToUpdate,
-            weight: finalWeight,
+            weight: finalNumericWeight,
             price: newPrice,
             quantity: 1, 
         };
@@ -731,13 +739,18 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                                         Sell Weight (g)
                                     </label>
                                     <input
-                                        type="number"
-                                        value={item.weight === 0 ? '' : item.weight}
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={weightInputs[item.itemId] !== undefined ? weightInputs[item.itemId] : (item.weight === 0 ? '' : item.weight)}
                                         onChange={(e) => handleItemWeightChange(index, e.target.value)}
+                                        onBlur={() => {
+                                            setWeightInputs(prev => {
+                                                const newInputs = {...prev};
+                                                delete newInputs[item.itemId];
+                                                return newInputs;
+                                            });
+                                        }}
                                         className="w-full p-1.5 border rounded"
-                                        step="0.0001"
-                                        min="0"
-                                        max={inventoryItem?.weight}
                                     />
                                 </div>
                                 <div>
