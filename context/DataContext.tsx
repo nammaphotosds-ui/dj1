@@ -350,7 +350,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const taxableAmount = finalAmount + makingChargeAmount + wastageAmount;
     const sgstAmount = taxableAmount * (billData.sgstPercentage / 100);
     const cgstAmount = taxableAmount * (billData.cgstPercentage / 100);
-    const grandTotal = taxableAmount + sgstAmount + cgstAmount - billData.bargainedAmount;
+    const grandTotal = taxableAmount + sgstAmount + cgstAmount - billData.bargainedAmount - billData.oldItemBalance;
     const amountPaid = billData.amountPaid;
     const netWeight = totalGrossWeight - billData.lessWeight;
     const customer = customers.find(c => c.id === billData.customerId);

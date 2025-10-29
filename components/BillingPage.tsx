@@ -146,6 +146,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     {wastageAmount > 0 && <div className="flex justify-between"><span>Wastage ({bill.wastagePercentage}%):</span><span>+ ₹{wastageAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {sgstAmount > 0 && <div className="flex justify-between"><span>SGST ({sgstPercentage}%):</span><span>+ ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {cgstAmount > 0 && <div className="flex justify-between"><span>CGST ({cgstPercentage}%):</span><span>+ ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
+                                    {bill.oldItemBalance > 0 && <div className="flex justify-between text-green-600"><span>Old Item Balance:</span><span>- ₹{bill.oldItemBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {bargainedAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount:</span><span>- ₹{bargainedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     <div className="flex justify-between text-base mt-1 pt-1 border-t-2 border-brand-charcoal">
                                         <span className="font-bold">Grand Total:</span>
@@ -271,6 +272,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
   const [billType, setBillType] = useState<BillType>(BillType.ESTIMATE);
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'processing' | 'success'>('idle');
   const [lessWeight, setLessWeight] = useState('');
+  const [oldItemBalance, setOldItemBalance] = useState('');
   const [makingChargePercentage, setMakingChargePercentage] = useState('');
   const [wastagePercentage, setWastagePercentage] = useState('');
   const [sgstPercentage, setSgstPercentage] = useState('');
@@ -320,7 +322,8 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     const cgstAmount = taxableAmount * (cgstP / 100);
 
     const ba = parseFloat(bargainedAmount) || 0;
-    const grandTotal = taxableAmount + sgstAmount + cgstAmount - ba;
+    const oib = parseFloat(oldItemBalance) || 0;
+    const grandTotal = taxableAmount + sgstAmount + cgstAmount - ba - oib;
 
     const netWeight = totalWeight - lw;
 
@@ -336,7 +339,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
         totalWeight, 
         netWeight 
     };
-  }, [selectedItems, bargainedAmount, makingChargePercentage, wastagePercentage, lessWeight, sgstPercentage, cgstPercentage]);
+  }, [selectedItems, bargainedAmount, oldItemBalance, makingChargePercentage, wastagePercentage, lessWeight, sgstPercentage, cgstPercentage]);
 
   const updatePricesForCategory = (category: JewelryCategory, rateStr: string, itemsToUpdate: BillItem[]) => {
     const rate = parseFloat(rateStr);
@@ -542,6 +545,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
     setSelectedCustomerId(null);
     setSelectedItems([]);
     setBargainedAmount('');
+    setOldItemBalance('');
     setLessWeight('');
     setMakingChargePercentage('');
     setWastagePercentage('');
@@ -590,6 +594,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
           items: selectedItems,
           totalAmount: calculations.totalAmount,
           bargainedAmount: parseFloat(bargainedAmount) || 0,
+          oldItemBalance: parseFloat(oldItemBalance) || 0,
           lessWeight: parseFloat(lessWeight) || 0,
           makingChargePercentage: parseFloat(makingChargePercentage) || 0,
           wastagePercentage: parseFloat(wastagePercentage) || 0,
@@ -780,72 +785,72 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                 <div className="space-y-2 text-sm">
                     <div className="flex justify-between"><span>Subtotal (Gross):</span><span>₹{calculations.totalAmount.toLocaleString('en-IN')}</span></div>
                     {calculations.lessWeightValue > 0 && (
-                        <div className="flex justify-between text-blue-600"><span>Less Weight Value:</span><span>- ₹{calculations.lessWeightValue.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                        <div className="flex justify-between text-red-600"><span>Less Weight Value:</span><span>- ₹{calculations.lessWeightValue.toLocaleString('en-IN')}</span></div>
                     )}
-                    <div className="flex justify-between font-semibold border-t pt-1 mt-1"><span>Net Amount:</span><span>₹{calculations.actualSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                    <div className="flex justify-between"><span>Making Charges ({(parseFloat(makingChargePercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.makingChargeAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                    <div className="flex justify-between"><span>Wastage ({(parseFloat(wastagePercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.wastageAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                    <div className="flex justify-between"><span>SGST ({(parseFloat(sgstPercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.sgstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                    <div className="flex justify-between"><span>CGST ({(parseFloat(cgstPercentage) || 0)}%):</span><span className="text-orange-600">+ ₹{calculations.cgstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                    <div className="flex justify-between"><span>Discount:</span><span className="text-green-600">- ₹{(parseFloat(bargainedAmount) || 0).toLocaleString('en-IN')}</span></div>
-                    <div className="flex justify-between font-bold text-lg border-t-2 border-brand-charcoal pt-2 mt-2"><span>Grand Total:</span><span className="text-brand-gold-dark">₹{calculations.grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                    <div className="space-y-2 mt-4 pt-4 border-t">
-                        <div className="grid grid-cols-2 gap-4">
-                             <div>
-                                <label htmlFor="lessWeight" className="block text-xs font-medium text-gray-600">Less Weight (g)</label>
-                                <input id="lessWeight" type="number" value={lessWeight} onChange={e => setLessWeight(e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.0000" step="0.0001" />
-                            </div>
-                            <div>
-                                <label htmlFor="bargainedAmount" className="block text-xs font-medium text-gray-600">Discount (₹)</label>
-                                <input id="bargainedAmount" type="number" value={bargainedAmount} onChange={e => setBargainedAmount(e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.00" step="0.01" />
-                            </div>
+                    <div className="flex justify-between font-bold"><span>Subtotal (Net):</span><span>₹{calculations.actualSubtotal.toLocaleString('en-IN')}</span></div>
+                </div>
+                
+                <div className="border-t pt-4 space-y-4">
+                    <div>
+                        <label htmlFor="lessWeight" className="block text-sm font-medium">Less Weight (g)</label>
+                        <input id="lessWeight" type="number" step="0.0001" value={lessWeight} onChange={e => setLessWeight(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 1.5" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="makingCharge" className="block text-sm font-medium">Making (%)</label>
+                            <input id="makingCharge" type="number" value={makingChargePercentage} onChange={e => setMakingChargePercentage(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 12" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="makingChargePercentage" className="block text-xs font-medium text-gray-600">Making Charge (%)</label>
-                                <input id="makingChargePercentage" type="number" value={makingChargePercentage} onChange={e => setMakingChargePercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 10" step="0.01" />
-                            </div>
-                            <div>
-                                <label htmlFor="wastagePercentage" className="block text-xs font-medium text-gray-600">Wastage (%)</label>
-                                <input id="wastagePercentage" type="number" value={wastagePercentage} onChange={e => setWastagePercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 3" step="0.01" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="sgstPercentage" className="block text-xs font-medium text-gray-600">SGST (%)</label>
-                                <input id="sgstPercentage" type="number" value={sgstPercentage} onChange={e => setSgstPercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 1.5" step="0.01" />
-                            </div>
-                            <div>
-                                <label htmlFor="cgstPercentage" className="block text-xs font-medium text-gray-600">CGST (%)</label>
-                                <input id="cgstPercentage" type="number" value={cgstPercentage} onChange={e => setCgstPercentage(e.target.value)} className="w-full p-1.5 border rounded" placeholder="e.g. 1.5" step="0.01" />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 pt-2">
-                             <label className="block text-sm font-medium">Bill Type:</label>
-                             <div className="flex gap-4">
-                                <label className="flex items-center"><input type="radio" name="billType" value={BillType.ESTIMATE} checked={billType === BillType.ESTIMATE} onChange={() => handleBillTypeChange(BillType.ESTIMATE)} className="mr-2"/> Estimate</label>
-                                <label className="flex items-center"><input type="radio" name="billType" value={BillType.INVOICE} checked={billType === BillType.INVOICE} onChange={() => handleBillTypeChange(BillType.INVOICE)} className="mr-2"/> Invoice</label>
-                             </div>
+                        <div>
+                            <label htmlFor="wastage" className="block text-sm font-medium">Wastage (%)</label>
+                            <input id="wastage" type="number" value={wastagePercentage} onChange={e => setWastagePercentage(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 3" />
                         </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="sgstPercentage" className="block text-sm font-medium">SGST (%)</label>
+                            <input id="sgstPercentage" type="number" value={sgstPercentage} onChange={e => setSgstPercentage(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 1.5" />
+                        </div>
+                        <div>
+                            <label htmlFor="cgstPercentage" className="block text-sm font-medium">CGST (%)</label>
+                            <input id="cgstPercentage" type="number" value={cgstPercentage} onChange={e => setCgstPercentage(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 1.5" />
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="oldItemBalance" className="block text-sm font-medium">OLD ITEM BALANCE (₹)</label>
+                        <input id="oldItemBalance" type="number" step="0.01" value={oldItemBalance} onChange={e => setOldItemBalance(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 1000" />
+                    </div>
+                    <div>
+                        <label htmlFor="bargainedAmount" className="block text-sm font-medium">Discount (₹)</label>
+                        <input id="bargainedAmount" type="number" step="0.01" value={bargainedAmount} onChange={e => setBargainedAmount(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 500" />
+                    </div>
                 </div>
-                <div className="mt-6 flex flex-col gap-3">
-                     <button 
-                        type="submit" 
-                        value="download"
-                        disabled={!selectedCustomerId || selectedItems.length === 0 || submissionStatus !== 'idle'}
-                        className="w-full p-3 bg-brand-gold text-brand-charcoal rounded-lg font-semibold hover:bg-brand-gold-dark transition disabled:opacity-70"
-                    >
-                        {submissionStatus === 'processing' ? 'Processing...' : submissionStatus === 'success' ? 'Success!' : 'Save & Download'}
-                    </button>
-                    <button 
-                        type="submit" 
-                        value="send"
-                        disabled={!selectedCustomerId || selectedItems.length === 0 || submissionStatus !== 'idle' || !selectedCustomer?.phone}
-                        className="w-full p-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-70 flex items-center justify-center gap-2"
-                    >
-                       <SendIcon/> {submissionStatus === 'processing' ? 'Processing...' : 'Save & Send to WhatsApp'}
-                    </button>
+
+                <div className="space-y-1 text-sm border-t pt-4">
+                     <div className="flex justify-between"><span>Making Charges ({makingChargePercentage || 0}%):</span><span>+ ₹{calculations.makingChargeAmount.toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between"><span>Wastage ({wastagePercentage || 0}%):</span><span>+ ₹{calculations.wastageAmount.toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between"><span>SGST ({sgstPercentage || 0}%):</span><span>+ ₹{calculations.sgstAmount.toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between"><span>CGST ({cgstPercentage || 0}%):</span><span>+ ₹{calculations.cgstAmount.toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between text-green-600"><span>Old Item Balance:</span><span>- ₹{(parseFloat(oldItemBalance) || 0).toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between text-green-600"><span>Discount:</span><span>- ₹{(parseFloat(bargainedAmount) || 0).toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between text-xl mt-2 pt-2 border-t-2 border-brand-charcoal">
+                        <span className="font-bold">Grand Total:</span>
+                        <span className="font-bold">₹{calculations.grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                     </div>
+                </div>
+
+                 <div className="border-t pt-4 space-y-2">
+                    <div className="flex space-x-2">
+                        <button type="button" onClick={() => handleBillTypeChange(BillType.ESTIMATE)} className={`w-full py-2 rounded-lg font-semibold ${billType === BillType.ESTIMATE ? 'bg-brand-gold text-brand-charcoal' : 'bg-gray-200'}`}>Estimate</button>
+                        <button type="button" onClick={() => handleBillTypeChange(BillType.INVOICE)} className={`w-full py-2 rounded-lg font-semibold ${billType === BillType.INVOICE ? 'bg-brand-gold text-brand-charcoal' : 'bg-gray-200'}`}>Invoice</button>
+                    </div>
+                    <div className="flex space-x-2">
+                        <button type="submit" value="download" disabled={submissionStatus !== 'idle'} className="w-full p-3 bg-brand-charcoal text-white rounded-lg font-semibold hover:bg-black transition disabled:opacity-50">
+                           {submissionStatus === 'processing' ? 'Processing...' : submissionStatus === 'success' ? 'Done!' : `Save & Download ${billType}`}
+                        </button>
+                        <button type="submit" value="send" disabled={submissionStatus !== 'idle'} className="w-full p-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center">
+                            <SendIcon /> Send
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,5 +1,6 @@
-// FIX: Changed the type-only import of React to a full import. The type-only import was insufficient for the global JSX namespace augmentation to be correctly applied, which caused widespread errors where standard HTML elements were not recognized in JSX. A full value import ensures that the necessary React types, including the intrinsic elements for HTML, are loaded and available globally.
-import React from 'react';
+// FIX: Replaced 'import React from "react"' with a side-effect import 'import "react"' and specific type imports. The side-effect import guarantees that React's global JSX typings are loaded before the augmentation happens, which fixes widespread 'Property does not exist on type JSX.IntrinsicElements' errors. The previous full import was likely being optimized away by the compiler because it was only used for type information, causing the 'dotlottie-wc' augmentation to overwrite the intrinsic elements instead of merging with them.
+import 'react';
+import type { DetailedHTMLProps, HTMLAttributes, CSSProperties } from 'react';
 
 export enum JewelryCategory {
   GOLD = 'Gold',
@@ -53,6 +54,7 @@ export interface Bill {
   items: BillItem[];
   totalAmount: number; // Subtotal of items
   bargainedAmount: number; // Discount
+  oldItemBalance: number;
   finalAmount: number; // totalAmount - lessWeightValue
   lessWeight: number;
   netWeight: number;
@@ -64,7 +66,7 @@ export interface Bill {
   cgstPercentage: number;
   sgstAmount: number;
   cgstAmount: number;
-  grandTotal: number; // finalAmount + makingChargeAmount + wastageAmount + sgstAmount + cgstAmount - bargainedAmount
+  grandTotal: number; // finalAmount + makingChargeAmount + wastageAmount + sgstAmount + cgstAmount - bargainedAmount - oldItemBalance
   amountPaid: number; // Should be equal to grandTotal
   date: string;
   createdBy: string; // 'admin' or staff ID
@@ -114,7 +116,7 @@ export type CurrentUser = {
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      'dotlottie-wc': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { src: string; autoplay?: boolean; loop?: boolean; style?: React.CSSProperties }, HTMLElement>;
+      'dotlottie-wc': DetailedHTMLProps<HTMLAttributes<HTMLElement> & { src: string; autoplay?: boolean; loop?: boolean; style?: CSSProperties }, HTMLElement>;
     }
   }
 }
