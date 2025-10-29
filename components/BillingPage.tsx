@@ -146,7 +146,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                     {wastageAmount > 0 && <div className="flex justify-between"><span>Wastage ({bill.wastagePercentage}%):</span><span>+ ₹{wastageAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {sgstAmount > 0 && <div className="flex justify-between"><span>SGST ({sgstPercentage}%):</span><span>+ ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {cgstAmount > 0 && <div className="flex justify-between"><span>CGST ({cgstPercentage}%):</span><span>+ ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
-                                    {bill.oldItemBalance > 0 && <div className="flex justify-between text-green-600"><span>Old Item Balance:</span><span>- ₹{bill.oldItemBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
+                                    {bill.oldItemBalance > 0 && <div className="flex justify-between text-green-600"><span>Return Items:</span><span>- ₹{bill.oldItemBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     {bargainedAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount:</span><span>- ₹{bargainedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>}
                                     <div className="flex justify-between text-base mt-1 pt-1 border-t-2 border-brand-charcoal">
                                         <span className="font-bold">Grand Total:</span>
@@ -816,7 +816,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="oldItemBalance" className="block text-sm font-medium">OLD ITEM BALANCE (₹)</label>
+                        <label htmlFor="oldItemBalance" className="block text-sm font-medium">Return Items (₹)</label>
                         <input id="oldItemBalance" type="number" step="0.01" value={oldItemBalance} onChange={e => setOldItemBalance(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="e.g. 1000" />
                     </div>
                     <div>
@@ -830,7 +830,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                      <div className="flex justify-between"><span>Wastage ({wastagePercentage || 0}%):</span><span>+ ₹{calculations.wastageAmount.toLocaleString('en-IN')}</span></div>
                      <div className="flex justify-between"><span>SGST ({sgstPercentage || 0}%):</span><span>+ ₹{calculations.sgstAmount.toLocaleString('en-IN')}</span></div>
                      <div className="flex justify-between"><span>CGST ({cgstPercentage || 0}%):</span><span>+ ₹{calculations.cgstAmount.toLocaleString('en-IN')}</span></div>
-                     <div className="flex justify-between text-green-600"><span>Old Item Balance:</span><span>- ₹{(parseFloat(oldItemBalance) || 0).toLocaleString('en-IN')}</span></div>
+                     <div className="flex justify-between text-green-600"><span>Return Items:</span><span>- ₹{(parseFloat(oldItemBalance) || 0).toLocaleString('en-IN')}</span></div>
                      <div className="flex justify-between text-green-600"><span>Discount:</span><span>- ₹{(parseFloat(bargainedAmount) || 0).toLocaleString('en-IN')}</span></div>
                      <div className="flex justify-between text-xl mt-2 pt-2 border-t-2 border-brand-charcoal">
                         <span className="font-bold">Grand Total:</span>
