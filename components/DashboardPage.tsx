@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useDataContext } from '../context/DataContext';
@@ -58,7 +59,7 @@ const CategoryWeights: React.FC = () => {
                             <span className={`w-4 h-4 rounded-full mr-3 shadow-inner ${categoryStyles[category as JewelryCategory].color}`}></span>
                             <span className="font-semibold">{categoryStyles[category as JewelryCategory].name}</span>
                         </div>
-                        <span className="font-bold text-brand-charcoal">{weights[category as JewelryCategory].toFixed(3)} g</span>
+                        <span className="font-bold text-brand-charcoal">{weights[category as JewelryCategory].toFixed(4)} g</span>
                     </div>
                 ))}
             </div>
@@ -204,7 +205,7 @@ const RecentTransactions: React.FC = () => {
 
         return Object.entries(summary).map(([category, weight]) => (
             <span key={category} className="mr-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
-                {category}: <span className="font-semibold">{weight.toFixed(2)}g</span>
+                {category}: <span className="font-semibold">{weight.toFixed(4)}g</span>
             </span>
         ));
     };

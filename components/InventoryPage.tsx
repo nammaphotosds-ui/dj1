@@ -26,7 +26,7 @@ const InventoryListItem: React.FC<{ item: JewelryItem; onDelete: (itemId: string
                 <p className="font-bold text-brand-charcoal truncate">{item.name}</p>
                 <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mt-1">
                     <span>ID: <span className="font-mono">{item.serialNo}</span></span>
-                    <span>Wt: <span className="font-mono">{item.weight.toFixed(3)}g</span></span>
+                    <span>Wt: <span className="font-mono">{item.weight.toFixed(4)}g</span></span>
                     {item.category === JewelryCategory.GOLD && <span>Purity: <span className="font-mono">{item.purity}ct</span></span>}
                 </div>
             </div>
@@ -130,7 +130,7 @@ const InventoryPage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <InventoryStatCard title="Unique Items" value={inventoryStats.uniqueItemCount} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>} />
-            <InventoryStatCard title="Total Weight" value={`${inventoryStats.totalWeight.toFixed(3)} g`} icon={<WeightIcon />} />
+            <InventoryStatCard title="Total Weight" value={`${inventoryStats.totalWeight.toFixed(4)} g`} icon={<WeightIcon />} />
         </div>
 
         <div className="space-y-3">

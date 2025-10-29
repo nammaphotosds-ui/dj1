@@ -71,7 +71,7 @@ const EditInventoryItemForm: React.FC<EditInventoryItemFormProps> = ({ item, onC
                 </select>
             </div>
             <div className={`grid ${category === JewelryCategory.GOLD ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                <input type="number" step="0.001" placeholder="Weight (grams)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full p-2 border rounded" required/>
+                <input type="number" step="0.0001" placeholder="Weight (grams)" value={weight} onChange={e => setWeight(e.target.value)} className="w-full p-2 border rounded" required/>
                 {category === JewelryCategory.GOLD && (
                     <input type="number" step="0.1" placeholder="Purity (carat)" value={purity} onChange={e => setPurity(e.target.value)} className="w-full p-2 border rounded" required/>
                 )}

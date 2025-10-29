@@ -140,7 +140,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
 
         return Object.entries(summary).map(([category, weight]) => (
             <span key={category} className="mr-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
-                {category}: <span className="font-semibold">{weight.toFixed(2)}g</span>
+                {category}: <span className="font-semibold">{weight.toFixed(4)}g</span>
             </span>
         ));
     };
@@ -154,7 +154,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
             summary[item.category] += item.weight * item.quantity;
         });
         return Object.entries(summary)
-            .map(([category, weight]) => `${category}: ${weight.toFixed(2)}g`)
+            .map(([category, weight]) => `${category}: ${weight.toFixed(4)}g`)
             .join(', ');
     };
     
@@ -278,7 +278,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <StatCard title="Total Items Purchased" value={distributionReportStats.totalItems} icon={<InventoryIcon />} />
-                        <StatCard title="Total Weight (g)" value={distributionReportStats.totalWeight.toFixed(3)} icon={<WeightIcon />} />
+                        <StatCard title="Total Weight (g)" value={distributionReportStats.totalWeight.toFixed(4)} icon={<WeightIcon />} />
                         <StatCard title="Unique SKUs" value={distributionReportStats.uniqueSKUs} icon={<DistributorIcon />} />
                     </div>
                     <div className="bg-white p-4 md:p-6 rounded-lg shadow-md border">
@@ -300,9 +300,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCu
                                         <tr key={item.id} className="border-b hover:bg-gray-50">
                                             <td className="p-3 font-semibold">{distributorNameMap.get(item.distributorId) || 'Unknown'}</td>
                                             <td className="p-3">{item.name}</td>
-                                            <td className="p-3 hidden md:table-cell">{item.weight.toFixed(3)}</td>
+                                            <td className="p-3 hidden md:table-cell">{item.weight.toFixed(4)}</td>
                                             <td className="p-3 text-right">{item.quantity}</td>
-                                            <td className="p-3 text-right font-medium">{(item.weight * item.quantity).toFixed(3)}</td>
+                                            <td className="p-3 text-right font-medium">{(item.weight * item.quantity).toFixed(4)}</td>
                                             <td className="p-3 text-sm text-gray-600">{new Date(item.dateAdded).toLocaleDateString()}</td>
                                         </tr>
                                     ))}

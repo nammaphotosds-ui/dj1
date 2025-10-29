@@ -112,7 +112,7 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                                                 {item.category && <span className="text-gray-500 font-normal"> ({item.category})</span>}
                                             </td>
                                             <td className={`font-mono text-xs border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.serialNo}</td>
-                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(3)}</td>
+                                            <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{item.weight.toFixed(4)}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{ratePerGram.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                             <td className={`text-right font-mono border border-brand-gold-dark/30 ${tableCellClasses}`}>{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         </tr>
@@ -136,9 +136,9 @@ const InvoiceTemplate: React.FC<{bill: Bill, customer: Customer}> = ({bill, cust
                             </div>
                             <div className="w-1/2 text-xs">
                                 <div className="space-y-1">
-                                    <div className="flex justify-between"><span>Gross Wt:</span><span>{totalGrossWeight.toFixed(3)} g</span></div>
-                                    {bill.lessWeight > 0 && <div className="flex justify-between"><span>Less Wt:</span><span>- {bill.lessWeight.toFixed(3)} g</span></div>}
-                                    <div className="flex justify-between font-bold border-t border-gray-200 mt-1 pt-1"><span>Net Wt:</span><span>{netWeight.toFixed(3)} g</span></div>
+                                    <div className="flex justify-between"><span>Gross Wt:</span><span>{totalGrossWeight.toFixed(4)} g</span></div>
+                                    {bill.lessWeight > 0 && <div className="flex justify-between"><span>Less Wt:</span><span>- {bill.lessWeight.toFixed(4)} g</span></div>}
+                                    <div className="flex justify-between font-bold border-t border-gray-200 mt-1 pt-1"><span>Net Wt:</span><span>{netWeight.toFixed(4)} g</span></div>
                                 </div>
                                 <div className="space-y-1 mt-2 pt-2 border-t border-gray-200">
                                     <div className="flex justify-between"><span>Subtotal:</span><span>₹{finalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
@@ -720,7 +720,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                                 <div>
                                     <p className="font-semibold">{item.name}</p>
                                     <p className="text-xs text-gray-500">
-                                        S/N: {item.serialNo} | Stock: {inventoryItem?.weight.toFixed(3)}g
+                                        S/N: {item.serialNo} | Stock: {inventoryItem?.weight.toFixed(4)}g
                                     </p>
                                 </div>
                                 <button type="button" onClick={() => handleRemoveItem(item.itemId)} className="text-red-500 hover:text-red-700 font-bold text-xl leading-none -mt-1 -mr-1">&times;</button>
@@ -735,7 +735,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                                         value={item.weight === 0 ? '' : item.weight}
                                         onChange={(e) => handleItemWeightChange(index, e.target.value)}
                                         className="w-full p-1.5 border rounded"
-                                        step="0.001"
+                                        step="0.0001"
                                         min="0"
                                         max={inventoryItem?.weight}
                                     />
@@ -760,9 +760,9 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
             <h2 className="text-xl font-bold mb-4">2. Summary & Payment</h2>
             <div className="space-y-4">
                 <div className="space-y-2 text-sm border-b pb-4">
-                     <div className="flex justify-between font-semibold"><span>Total Gross Wt:</span><span>{calculations.totalWeight.toFixed(3)} g</span></div>
-                     <div className="flex justify-between"><span>Less Weight:</span><span>- {(parseFloat(lessWeight) || 0).toFixed(3)} g</span></div>
-                     <div className="flex justify-between font-bold text-base border-t pt-1 mt-1"><span>Net Weight:</span><span>{calculations.netWeight.toFixed(3)} g</span></div>
+                     <div className="flex justify-between font-semibold"><span>Total Gross Wt:</span><span>{calculations.totalWeight.toFixed(4)} g</span></div>
+                     <div className="flex justify-between"><span>Less Weight:</span><span>- {(parseFloat(lessWeight) || 0).toFixed(4)} g</span></div>
+                     <div className="flex justify-between font-bold text-base border-t pt-1 mt-1"><span>Net Weight:</span><span>{calculations.netWeight.toFixed(4)} g</span></div>
                 </div>
                 <div className="space-y-2 text-sm">
                     <div className="flex justify-between"><span>Subtotal (Gross):</span><span>₹{calculations.totalAmount.toLocaleString('en-IN')}</span></div>
@@ -780,7 +780,7 @@ const BillingPage: React.FC<{setCurrentPage: (page: Page) => void}> = ({setCurre
                         <div className="grid grid-cols-2 gap-4">
                              <div>
                                 <label htmlFor="lessWeight" className="block text-xs font-medium text-gray-600">Less Weight (g)</label>
-                                <input id="lessWeight" type="number" value={lessWeight} onChange={e => setLessWeight(e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.000" step="0.001" />
+                                <input id="lessWeight" type="number" value={lessWeight} onChange={e => setLessWeight(e.target.value)} className="w-full p-1.5 border rounded" placeholder="0.0000" step="0.0001" />
                             </div>
                             <div>
                                 <label htmlFor="bargainedAmount" className="block text-xs font-medium text-gray-600">Discount (₹)</label>
