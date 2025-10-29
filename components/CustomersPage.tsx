@@ -3,6 +3,7 @@ import { useDataContext } from '../context/DataContext';
 import { useUIContext } from '../context/UIContext';
 import type { Customer } from '../types';
 import Avatar from './common/Avatar';
+import CustomerDetailPage from './CustomerDetailPage';
 
 // Simplified CustomerListItem for display
 const CustomerListItem: React.FC<{ customer: Customer }> = ({ customer }) => {
@@ -29,6 +30,7 @@ export const CustomersPage: React.FC = () => {
     const { customers } = useDataContext();
     const { openAddCustomerModal } = useUIContext();
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
     const filteredCustomers = useMemo(() => {
         return customers.filter(c =>
@@ -36,6 +38,15 @@ export const CustomersPage: React.FC = () => {
             c.phone.includes(searchTerm)
         ).sort((a,b) => a.name.localeCompare(b.name));
     }, [customers, searchTerm]);
+
+    if (selectedCustomerId) {
+        return (
+            <CustomerDetailPage
+                customerId={selectedCustomerId}
+                onBack={() => setSelectedCustomerId(null)}
+            />
+        );
+    }
 
     return (
         <div>
@@ -54,7 +65,13 @@ export const CustomersPage: React.FC = () => {
             <div className="space-y-3">
                 {filteredCustomers.length > 0 ? (
                     filteredCustomers.map(customer => (
-                        <CustomerListItem key={customer.id} customer={customer} />
+                        <button
+                            key={customer.id}
+                            onClick={() => setSelectedCustomerId(customer.id)}
+                            className="w-full text-left focus:outline-none focus:ring-2 focus:ring-brand-gold-light rounded-lg"
+                        >
+                            <CustomerListItem customer={customer} />
+                        </button>
                     ))
                 ) : (
                     <div className="text-center py-16 bg-white rounded-lg shadow-md">

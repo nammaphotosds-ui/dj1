@@ -1,5 +1,5 @@
-// FIX: Reverted 'import React' to 'import type React'. The value import was causing a conflict with the global JSX namespace, leading to errors on all standard HTML elements. A type-only import is sufficient here and resolves the conflict.
-import type React from 'react';
+// FIX: Changed the type-only import of React to a full import. The type-only import was insufficient for the global JSX namespace augmentation to be correctly applied, which caused widespread errors where standard HTML elements were not recognized in JSX. A full value import ensures that the necessary React types, including the intrinsic elements for HTML, are loaded and available globally.
+import React from 'react';
 
 export enum JewelryCategory {
   GOLD = 'Gold',
